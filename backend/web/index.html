@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shop Rates - Gold & Silver Price Tracker</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🪙 Shop Rates</h1>
+            <p class="subtitle">Real-time Gold & Silver Price Tracker</p>
+            <div class="status-indicator">
+                <span id="status-dot" class="status-dot"></span>
+                <span id="status-text">Connecting...</span>
+            </div>
+        </header>
+
+        <nav class="tabs">
+            <button class="tab-btn active" data-tab="rates">Rates</button>
+            <button class="tab-btn" data-tab="alerts">Alerts</button>
+            <button class="tab-btn" data-tab="preferences">Settings</button>
+        </nav>
+
+        <!-- Rates Tab -->
+        <div id="rates-tab" class="tab-content active">
+            <div class="toolbar">
+                <select id="commodity-filter" class="filter-select">
+                    <option value="all">All Commodities</option>
+                    <option value="gold">Gold</option>
+                    <option value="silver">Silver</option>
+                    <option value="coin">Coin</option>
+                </select>
+                <button id="refresh-btn" class="btn btn-primary">🔄 Refresh</button>
+                <div class="last-update">
+                    Last updated: <span id="last-update-time">Never</span>
+                </div>
+            </div>
+            <div id="rates-container" class="rates-grid">
+                <div class="loading">Loading rates...</div>
+            </div>
+        </div>
+
+        <!-- Alerts Tab -->
+        <div id="alerts-tab" class="tab-content">
+            <div class="toolbar">
+                <button id="create-alert-btn" class="btn btn-primary">➕ Create Alert</button>
+            </div>
+            <div id="alerts-container" class="alerts-list">
+                <div class="loading">Loading alerts...</div>
+            </div>
+        </div>
+
+        <!-- Preferences Tab -->
+        <div id="preferences-tab" class="tab-content">
+            <div class="preferences-form">
+                <h2>User Preferences</h2>
+                <div class="form-group">
+                    <label for="refresh-interval">Refresh Interval (seconds)</label>
+                    <input type="number" id="refresh-interval" min="5" max="300" value="15">
+                </div>
+                <div class="form-group">
+                    <label for="currency">Currency</label>
+                    <select id="currency">
+                        <option value="INR">INR (₹)</option>
+                        <option value="USD">USD ($)</option>
+                        <option value="EUR">EUR (€)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="theme">Theme</label>
+                    <select id="theme">
+                        <option value="light">Light</option>
+                        <option value="dark">Dark</option>
+                        <option value="system">System</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="notifications-on"> Enable Notifications
+                    </label>
+                </div>
+                <button id="save-preferences-btn" class="btn btn-primary">💾 Save Preferences</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Create Alert Modal -->
+    <div id="alert-modal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>Create Price Alert</h2>
+            <form id="alert-form">
+                <div class="form-group">
+                    <label for="alert-commodity">Commodity</label>
+                    <select id="alert-commodity" required>
+                        <option value="">Select a commodity...</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="alert-condition">Condition</label>
+                    <select id="alert-condition" required>
+                        <option value="<">Price drops below</option>
+                        <option value=">">Price rises above</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="alert-price">Target Price (₹)</label>
+                    <input type="number" id="alert-price" step="0.01" min="0" required>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" id="cancel-alert-btn">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Create Alert</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
+
+
