@@ -1,12 +1,23 @@
 const cron = require('node-cron');
 const { all, run, get } = require('../config/database');
+const { GOLD999_COMMODITY_ID } = require('../controllers/gold999Controller');
 
 let cronJob = null;
+let cachedRate = null;
+let cacheTimestamp = null;
+const CACHE_TTL = 5; // Cache rate for 5 seconds
 
 /**
- * Get latest rate for a commodity
+ * Get latest rate for GOLD 999 (with caching)
  */
 async function getLatestRate(commodityId) {
+  // Use cache if available and fresh
+  if (cachedRate && cacheTimestamp && 
+      commodityId === GOLD999_COMMODITY_ID &&
+      Date.now() - cacheTimestamp < CACHE_TTL * 1000) {
+    return cachedRate;
+  }
+
   const rate = await get(
     `SELECT * FROM rates
      WHERE commodity_id = ?
@@ -14,7 +25,75 @@ async function getLatestRate(commodityId) {
      LIMIT 1`,
     [commodityId]
   );
+
+  // Cache for GOLD 999
+  if (commodityId === GOLD999_COMMODITY_ID) {
+    cachedRate = rate;
+    cacheTimestamp = Date.now();
+  }
+
   return rate;
+}
+
+/**
+ * Check all active alerts for GOLD 999 only
+ */
+async function checkAlerts() {
+  try {
+    // Get latest rate once (cached)
+    const latestRate = await getLatestRate(GOLD999_COMMODITY_ID);
+    
+    if (!latestRate) {
+      return [];
+    }
+
+    const currentPrice = latestRate.ltp;
+
+    // Get only GOLD 999 active alerts that haven't been triggered
+    const alerts = await all(
+      `SELECT
+         a.id,
+         a.user_id,
+         a.commodity_id,
+         a.condition,
+         a.target_price,
+         c.name as commodity_name,
+         c.symbol
+       FROM alerts a
+       JOIN commodities c ON a.commodity_id = c.id
+       WHERE a.commodity_id = ?
+         AND a.active = 1 
+         AND a.triggered_at IS NULL`,
+      [GOLD999_COMMODITY_ID]
+    );
+
+    if (alerts.length === 0) {
+      return [];
+    }
+
+    const triggeredAlerts = [];
+
+    // Batch check all alerts with same price
+    for (const alert of alerts) {
+      if (isAlertTriggered(alert, currentPrice)) {
+        const notification = await createNotification(alert, currentPrice);
+        triggeredAlerts.push({
+          alert,
+          notification,
+          currentPrice
+        });
+      }
+    }
+
+    if (triggeredAlerts.length > 0) {
+      console.log(`✅ ${triggeredAlerts.length} GOLD 999 alert(s) triggered`);
+    }
+
+    return triggeredAlerts;
+  } catch (error) {
+    console.error('❌ Error checking alerts:', error.message);
+    return [];
+  }
 }
 
 /**
@@ -133,22 +212,15 @@ async function checkAlerts() {
  * Start the alert checker cron job
  */
 function start() {
-  const interval = parseInt(process.env.CHECK_ALERTS_INTERVAL || 30);
+  const interval = parseInt(process.env.CHECK_ALERTS_INTERVAL || 5); // Check every 5 seconds
 
-  console.log(`🔔 Alert checker starting (every ${interval} seconds)`);
+  console.log(`🔔 Alert checker starting (every ${interval} seconds) - GOLD 999 only`);
 
   // Check immediately on start
   checkAlerts();
 
-  // Schedule regular checks
-  if (interval < 60) {
-    // Use setInterval for sub-minute intervals
-    cronJob = setInterval(checkAlerts, interval * 1000);
-  } else {
-    // Use cron for minute-based intervals
-    const minutes = Math.floor(interval / 60);
-    cronJob = cron.schedule(`*/${minutes} * * * *`, checkAlerts);
-  }
+  // Use setInterval for frequent checks (optimized for 1s refresh)
+  cronJob = setInterval(checkAlerts, interval * 1000);
 }
 
 /**

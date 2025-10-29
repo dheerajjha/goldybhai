@@ -12,6 +12,7 @@ const commoditiesRouter = require('./routes/commodities');
 const ratesRouter = require('./routes/rates');
 const alertsRouter = require('./routes/alerts');
 const preferencesRouter = require('./routes/preferences');
+const gold999Router = require('./routes/gold999');
 
 // Import services
 const rateFetcher = require('./services/rateFetcher');
@@ -43,6 +44,7 @@ app.use('/api/commodities', commoditiesRouter);
 app.use('/api/rates', ratesRouter);
 app.use('/api/alerts', alertsRouter);
 app.use('/api/preferences', preferencesRouter);
+app.use('/api/gold999', gold999Router);
 
 // 404 handler for API routes
 app.use('/api/*', (req, res) => {
