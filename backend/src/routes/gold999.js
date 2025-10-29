@@ -7,6 +7,12 @@ const {
   GOLD999_COMMODITY_ID
 } = require('../controllers/gold999Controller');
 const { getAllAlerts, createAlert, updateAlert, deleteAlert } = require('../controllers/alertController');
+const {
+  getNotifications,
+  getUnreadCount,
+  markAsRead,
+  markAllAsRead
+} = require('../controllers/notificationController');
 
 // GET /api/gold999/current - Get current LTP (ultra-lightweight)
 router.get('/current', getCurrentLTP);
@@ -63,5 +69,17 @@ router.put('/alerts/:id', updateAlert);
 
 // DELETE /api/gold999/alerts/:id - Delete alert
 router.delete('/alerts/:id', deleteAlert);
+
+// GET /api/gold999/notifications - Get notifications for GOLD 999 alerts
+router.get('/notifications', getNotifications);
+
+// GET /api/gold999/notifications/unread-count - Get unread count
+router.get('/notifications/unread-count', getUnreadCount);
+
+// PUT /api/gold999/notifications/:id/read - Mark notification as read
+router.put('/notifications/:id/read', markAsRead);
+
+// PUT /api/gold999/notifications/read-all - Mark all notifications as read
+router.put('/notifications/read-all', markAllAsRead);
 
 module.exports = router;

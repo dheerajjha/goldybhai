@@ -63,11 +63,23 @@ Full rate details including buy/sell/high/low
 - `PUT /api/gold999/alerts/:id` - Update alert
 - `DELETE /api/gold999/alerts/:id` - Delete alert
 
+#### Notification Endpoints
+- `GET /api/gold999/notifications` - Get all notifications
+- `GET /api/gold999/notifications/unread-count` - Get unread count
+- `PUT /api/gold999/notifications/:id/read` - Mark notification as read
+- `PUT /api/gold999/notifications/read-all` - Mark all as read
+
 ```bash
 # Create alert
 curl -X POST http://localhost:3000/api/gold999/alerts \
   -H "Content-Type: application/json" \
   -d '{"condition": "<", "targetPrice": 120000}'
+
+# Get notifications
+curl http://localhost:3000/api/gold999/notifications
+
+# Get unread count
+curl http://localhost:3000/api/gold999/notifications/unread-count
 ```
 
 ### Legacy Endpoints (for web app compatibility)
@@ -141,10 +153,15 @@ backend/src/
 - Color-coded trends (green up, red down)
 - Smart Y-axis formatting (e.g., "₹1.24L" for large numbers)
 
-### Alerts
+### Alerts & Notifications
 - Create alerts for price thresholds
 - Visual alert cards with enable/disable
 - See triggered alerts with timestamps
+- **Real-time notifications** when alerts trigger
+- **Notification badge** showing unread count
+- **Local push notifications** (native OS notifications)
+- **Notifications screen** to view all alerts
+- Mark notifications as read
 - Easy deletion with confirmation
 
 ## 🔧 Technical Stack
@@ -246,6 +263,34 @@ flutter run
 - **Android Emulator**: Use `http://10.0.2.2:3000`
 - **Physical Device**: Use `http://YOUR_COMPUTER_IP:3000`
 
+## 🔔 Alert & Notification System
+
+### How It Works
+1. **Create Alert**: User sets price threshold via UI
+2. **Backend Monitoring**: Checks alerts every 5 seconds
+3. **Trigger Detection**: When price crosses threshold, notification created
+4. **Frontend Polling**: App checks for new notifications every 10 seconds
+5. **Badge Display**: Unread count shown on Alerts tab
+6. **Local Notification**: Native OS notification appears
+7. **View & Mark**: User can view and mark notifications as read
+
+### Notification Features
+- ✅ Real-time polling (10-second interval)
+- ✅ Unread badge on Alerts tab
+- ✅ Full notifications screen
+- ✅ Native local notifications
+- ✅ Mark individual/all as read
+- ✅ Automatic badge updates
+
+### Push Notifications (Future)
+For backend-to-device push notifications (works when app is closed), see `PUSH_NOTIFICATIONS_SETUP.md`:
+- Requires Firebase Cloud Messaging (FCM) setup
+- Android: `google-services.json` config file
+- iOS: `GoogleService-Info.plist` config file
+- Service account key for backend
+
+**Current implementation uses local notifications** which work when app is running or in background.
+
 ## 📝 Notes
 
 - All endpoints work alongside existing API (for web app compatibility)
@@ -253,6 +298,7 @@ flutter run
 - Chart data is aggregated server-side for efficiency
 - Alerts automatically scoped to GOLD 999
 - Cache expires appropriately for 1-second refresh
+- Notification polling runs every 10 seconds (non-blocking)
 
 ## 🔔 Alert Optimization Details
 

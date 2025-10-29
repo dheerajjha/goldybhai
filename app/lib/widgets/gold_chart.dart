@@ -3,18 +3,12 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
 import '../services/gold999_client.dart';
 
-/// Interactive chart widget for GOLD 999 price history
+/// Interactive chart widget for GOLD 999 price history (24 hours)
 class GoldChart extends StatelessWidget {
   final ChartData chartData;
   final String interval;
-  final ValueChanged<String>? onIntervalChanged;
 
-  const GoldChart({
-    super.key,
-    required this.chartData,
-    required this.interval,
-    this.onIntervalChanged,
-  });
+  const GoldChart({super.key, required this.chartData, required this.interval});
 
   @override
   Widget build(BuildContext context) {
@@ -27,8 +21,12 @@ class GoldChart extends StatelessWidget {
       );
     }
 
-    final minPrice = chartData.data.map((p) => p.ltp).reduce((a, b) => a < b ? a : b);
-    final maxPrice = chartData.data.map((p) => p.ltp).reduce((a, b) => a > b ? a : b);
+    final minPrice = chartData.data
+        .map((p) => p.ltp)
+        .reduce((a, b) => a < b ? a : b);
+    final maxPrice = chartData.data
+        .map((p) => p.ltp)
+        .reduce((a, b) => a > b ? a : b);
     final priceRange = maxPrice - minPrice;
     final chartMin = minPrice - (priceRange * 0.1);
     final chartMax = maxPrice + (priceRange * 0.1);
@@ -52,19 +50,37 @@ class GoldChart extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Time period selector
-          Row(
-            children: [
-              _buildPeriodButton(context, '1H', 'realtime', 1),
-              const SizedBox(width: 8),
-              _buildPeriodButton(context, '6H', 'hourly', 1),
-              const SizedBox(width: 8),
-              _buildPeriodButton(context, '1D', 'hourly', 1),
-              const SizedBox(width: 8),
-              _buildPeriodButton(context, '7D', 'hourly', 7),
-              const SizedBox(width: 8),
-              _buildPeriodButton(context, '30D', 'daily', 30),
-            ],
+          // Time period info (24 hours only)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            decoration: BoxDecoration(
+              color: Colors.amber.shade50,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.amber.shade200),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.access_time, size: 16, color: Colors.grey[700]),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Last 24 Hours',
+                      style: TextStyle(
+                        color: Colors.grey[800],
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ],
+                ),
+                Text(
+                  '${chartData.data.length} data points',
+                  style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                ),
+              ],
+            ),
           ),
           const SizedBox(height: 24),
           // Chart
@@ -77,10 +93,7 @@ class GoldChart extends StatelessWidget {
                   drawVerticalLine: false,
                   horizontalInterval: (chartMax - chartMin) / 5,
                   getDrawingHorizontalLine: (value) {
-                    return FlLine(
-                      color: Colors.grey[200]!,
-                      strokeWidth: 1,
-                    );
+                    return FlLine(color: Colors.grey[200]!, strokeWidth: 1);
                   },
                 ),
                 titlesData: FlTitlesData(
@@ -107,9 +120,11 @@ class GoldChart extends StatelessWidget {
                       reservedSize: 60, // Increased to prevent truncation
                       interval: (chartMax - chartMin) / 5,
                       getTitlesWidget: (value, meta) {
-                        final priceStr = NumberFormat('#,##,###').format(value.toInt());
+                        final priceStr = NumberFormat(
+                          '#,##,###',
+                        ).format(value.toInt());
                         // Format with 'L' for lakhs if needed
-                        final formatted = priceStr.length > 6 
+                        final formatted = priceStr.length > 6
                             ? '₹${priceStr.substring(0, priceStr.length - 5)}L'
                             : '₹$priceStr';
                         return Padding(
@@ -180,38 +195,6 @@ class GoldChart extends StatelessWidget {
     );
   }
 
-  Widget _buildPeriodButton(BuildContext context, String label, String intervalType, int days) {
-    // Use exact match - check if current interval and days match this button's params
-    final isSelected = interval == intervalType && 
-                       chartData.metadata['period']?.toString().contains('$days') == true;
-    
-    return Expanded(
-      child: GestureDetector(
-        onTap: () => onIntervalChanged?.call('$intervalType:$days'),
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          decoration: BoxDecoration(
-            color: isSelected ? Colors.amber : Colors.grey[100],
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(
-              color: isSelected ? Colors.amber.shade700 : Colors.transparent,
-              width: isSelected ? 2 : 1,
-            ),
-          ),
-          child: Text(
-            label,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: isSelected ? Colors.grey[900] : Colors.grey[600],
-              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-              fontSize: 12,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
   double _getBottomInterval() {
     final length = chartData.data.length;
     if (length <= 10) return 1;
@@ -227,24 +210,15 @@ class GoldChart extends StatelessWidget {
     final point = chartData.data[value.toInt()];
     return Text(
       _formatAxisTime(point.timestamp),
-      style: TextStyle(
-        color: Colors.grey[600],
-        fontSize: 10,
-      ),
+      style: TextStyle(color: Colors.grey[600], fontSize: 10),
     );
   }
 
   String _formatAxisTime(String timestamp) {
     try {
       final date = DateTime.parse(timestamp);
-      // Check if this is a date-only format (no time component)
-      if (timestamp.length <= 10 || !timestamp.contains('T') && !timestamp.contains(' ')) {
-        return DateFormat('MMM d').format(date);
-      } else if (interval == 'daily') {
-        return DateFormat('MMM d').format(date);
-      } else {
-        return DateFormat('HH:mm').format(date);
-      }
+      // Format with AM/PM for 24-hour view
+      return DateFormat('h a').format(date); // e.g., "1 PM", "6 AM"
     } catch (e) {
       return '';
     }
@@ -253,10 +227,12 @@ class GoldChart extends StatelessWidget {
   String _formatTooltipTime(String timestamp) {
     try {
       final date = DateTime.parse(timestamp);
-      return DateFormat('MMM d, HH:mm').format(date);
+      // Format with AM/PM for tooltip
+      return DateFormat(
+        'MMM d, h:mm a',
+      ).format(date); // e.g., "Oct 29, 2:30 PM"
     } catch (e) {
       return timestamp;
     }
   }
 }
-

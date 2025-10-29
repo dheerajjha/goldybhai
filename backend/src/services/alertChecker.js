@@ -120,8 +120,8 @@ async function createNotification(alert, currentPrice) {
     const message = `${alert.commodity_name} ${conditionText} ₹${alert.target_price.toLocaleString()} (Current: ₹${currentPrice.toLocaleString()})`;
 
     await run(
-      `INSERT INTO notifications (alert_id, message, sent_at, delivered)
-       VALUES (?, ?, CURRENT_TIMESTAMP, 1)`,
+      `INSERT INTO notifications (alert_id, message, sent_at, delivered, read)
+       VALUES (?, ?, CURRENT_TIMESTAMP, 1, 0)`,
       [alert.id, message]
     );
 

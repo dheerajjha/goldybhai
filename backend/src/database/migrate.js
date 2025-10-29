@@ -81,7 +81,14 @@ const migrations = [
    ON alerts(commodity_id)`,
 
   `CREATE INDEX IF NOT EXISTS idx_notifications_alert
-   ON notifications(alert_id, sent_at DESC)`
+   ON notifications(alert_id, sent_at DESC)`,
+
+  // 8. Add read column to notifications table (if not exists)
+  // Note: SQLite doesn't support IF NOT EXISTS for ALTER TABLE ADD COLUMN
+  // We'll handle this in code below
+
+  `CREATE INDEX IF NOT EXISTS idx_notifications_read
+   ON notifications(read, sent_at DESC)`
 ];
 
 async function migrate() {
@@ -89,9 +96,28 @@ async function migrate() {
     console.log('Starting database migration...');
     await initDatabase();
 
+    // Check if read column exists, add if not
+    try {
+      await run(`SELECT read FROM notifications LIMIT 1`);
+      console.log('   read column already exists, skipping...');
+    } catch (e) {
+      console.log('   Adding read column to notifications table...');
+      await run(`ALTER TABLE notifications ADD COLUMN read BOOLEAN DEFAULT 0`);
+    }
+
     for (let i = 0; i < migrations.length; i++) {
       console.log(`Running migration ${i + 1}/${migrations.length}...`);
-      await run(migrations[i]);
+      try {
+        await run(migrations[i]);
+      } catch (error) {
+        // Skip if already exists (for CREATE IF NOT EXISTS)
+        if (error.message.includes('already exists') || 
+            error.message.includes('duplicate column')) {
+          console.log(`   Skipping (already exists): ${error.message}`);
+          continue;
+        }
+        throw error;
+      }
     }
 
     console.log('✅ Migration completed successfully!');

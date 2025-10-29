@@ -168,6 +168,64 @@ class Gold999Client {
     }
   }
 
+  /// Get notifications for GOLD 999 alerts
+  Future<NotificationList> getNotifications({
+    int userId = 1,
+    int limit = 50,
+    bool unreadOnly = false,
+  }) async {
+    try {
+      final response = await _dio.get(
+        '/gold999/notifications',
+        queryParameters: {
+          'userId': userId,
+          'limit': limit,
+          'unreadOnly': unreadOnly,
+        },
+      );
+      return NotificationList.fromJson(response.data);
+    } catch (e) {
+      throw _handleError(e);
+    }
+  }
+
+  /// Get unread notification count
+  Future<int> getUnreadCount({int userId = 1}) async {
+    try {
+      final response = await _dio.get(
+        '/gold999/notifications/unread-count',
+        queryParameters: {'userId': userId},
+      );
+      return response.data['unread_count'] as int? ?? 0;
+    } catch (e) {
+      throw _handleError(e);
+    }
+  }
+
+  /// Mark notification as read
+  Future<void> markNotificationAsRead(int notificationId, {int userId = 1}) async {
+    try {
+      await _dio.put(
+        '/gold999/notifications/$notificationId/read',
+        queryParameters: {'userId': userId},
+      );
+    } catch (e) {
+      throw _handleError(e);
+    }
+  }
+
+  /// Mark all notifications as read
+  Future<void> markAllNotificationsAsRead({int userId = 1}) async {
+    try {
+      await _dio.put(
+        '/gold999/notifications/read-all',
+        queryParameters: {'userId': userId},
+      );
+    } catch (e) {
+      throw _handleError(e);
+    }
+  }
+
   // Background fetch methods (fire and forget)
   void _fetchCurrentLTP() {
     getCurrentLTP(useCache: false).catchError((e) {
@@ -458,6 +516,65 @@ class Alert {
           : null,
       commodityName: json['commodity_name'] as String,
       symbol: json['symbol'] as String,
+    );
+  }
+}
+
+class NotificationList {
+  final List<AppNotification> notifications;
+  final int unreadCount;
+
+  NotificationList({
+    required this.notifications,
+    required this.unreadCount,
+  });
+
+  factory NotificationList.fromJson(Map<String, dynamic> json) {
+    return NotificationList(
+      notifications: (json['data'] as List)
+          .map((n) => AppNotification.fromJson(n))
+          .toList(),
+      unreadCount: json['unread_count'] as int? ?? 0,
+    );
+  }
+}
+
+class AppNotification {
+  final int id;
+  final int alertId;
+  final String message;
+  final DateTime sentAt;
+  final bool delivered;
+  final bool read;
+  final double? targetPrice;
+  final String? condition;
+  final DateTime? triggeredAt;
+
+  AppNotification({
+    required this.id,
+    required this.alertId,
+    required this.message,
+    required this.sentAt,
+    required this.delivered,
+    required this.read,
+    this.targetPrice,
+    this.condition,
+    this.triggeredAt,
+  });
+
+  factory AppNotification.fromJson(Map<String, dynamic> json) {
+    return AppNotification(
+      id: json['id'] as int,
+      alertId: json['alert_id'] as int,
+      message: json['message'] as String,
+      sentAt: DateTime.parse(json['sent_at']),
+      delivered: json['delivered'] == 1 || json['delivered'] == true,
+      read: json['read'] == 1 || json['read'] == true,
+      targetPrice: json['target_price']?.toDouble(),
+      condition: json['condition'] as String?,
+      triggeredAt: json['triggered_at'] != null
+          ? DateTime.parse(json['triggered_at'])
+          : null,
     );
   }
 }

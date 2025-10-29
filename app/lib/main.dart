@@ -25,8 +25,8 @@ class MyApp extends StatelessWidget {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),
-        ),
-      ),
+                    ),
+                  ),
       home: const Gold999Screen(),
     );
   }

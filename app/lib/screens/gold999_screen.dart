@@ -5,6 +5,8 @@ import '../widgets/gold_price_display.dart';
 import '../widgets/gold_chart.dart';
 import '../widgets/alert_card.dart';
 import '../widgets/create_alert_dialog.dart';
+import 'notifications_screen.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 /// Main screen focused on GOLD 999 WITH GST
 class Gold999Screen extends StatefulWidget {
@@ -20,39 +22,143 @@ class _Gold999ScreenState extends State<Gold999Screen> with SingleTickerProvider
   CurrentLTP? _currentLTP;
   ChartData? _chartData;
   List<Alert> _alerts = [];
+  int _unreadNotificationCount = 0;
   bool _loading = true;
   bool _loadingChart = false;
   String? _error;
   
   String _currentInterval = 'hourly';
-  int _currentDays = 7;
+  int _currentDays = 1; // Fixed to 24 hours
   
   // Track last loaded interval/days to detect changes
   String? _lastLoadedInterval;
   int? _lastLoadedDays;
   
   Timer? _refreshTimer;
+  Timer? _notificationPollTimer;
   late TabController _tabController;
+  
+  // Local notifications
+  final FlutterLocalNotificationsPlugin _localNotifications =
+      FlutterLocalNotificationsPlugin();
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    _initializeLocalNotifications();
     _loadData();
     _setupAutoRefresh();
+    _setupNotificationPolling();
   }
 
   @override
   void dispose() {
     _refreshTimer?.cancel();
+    _notificationPollTimer?.cancel();
     _tabController.dispose();
     super.dispose();
+  }
+
+  Future<void> _initializeLocalNotifications() async {
+    const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
+    const iosSettings = DarwinInitializationSettings(
+      requestAlertPermission: true,
+      requestBadgePermission: true,
+      requestSoundPermission: true,
+    );
+    const initSettings = InitializationSettings(
+      android: androidSettings,
+      iOS: iosSettings,
+    );
+
+    await _localNotifications.initialize(
+      initSettings,
+      onDidReceiveNotificationResponse: (NotificationResponse response) {
+        // Navigate to notifications screen when tapped
+        if (response.payload == 'open_notifications') {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const NotificationsScreen()),
+          );
+        }
+      },
+    );
+
+    // Request permissions
+    await _localNotifications
+        .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin>()
+        ?.requestNotificationsPermission();
   }
 
   void _setupAutoRefresh() {
     _refreshTimer = Timer.periodic(const Duration(seconds: 1), (_) {
       _loadCurrentLTP();
     });
+  }
+
+  void _setupNotificationPolling() {
+    // Poll for unread count every 10 seconds
+    _notificationPollTimer = Timer.periodic(const Duration(seconds: 10), (_) {
+      _checkUnreadNotifications();
+    });
+    // Check immediately
+    _checkUnreadNotifications();
+  }
+
+  Future<void> _checkUnreadNotifications() async {
+    try {
+      final previousCount = _unreadNotificationCount;
+      final count = await _client.getUnreadCount();
+      
+      if (mounted) {
+        final countIncreased = count > previousCount;
+        
+        setState(() {
+          _unreadNotificationCount = count;
+        });
+
+        // If count increased and we had previous count, show local notification
+        if (countIncreased && previousCount >= 0 && count > 0) {
+          await _showLocalNotification(count);
+        }
+      }
+    } catch (e) {
+      // Silently fail - polling errors shouldn't disrupt app
+    }
+  }
+
+  Future<void> _showLocalNotification(int unreadCount) async {
+    const androidDetails = AndroidNotificationDetails(
+      'gold_alerts',
+      'Gold Price Alerts',
+      channelDescription: 'Notifications for gold price alerts',
+      importance: Importance.high,
+      priority: Priority.high,
+      showWhen: true,
+    );
+
+    const iosDetails = DarwinNotificationDetails(
+      presentAlert: true,
+      presentBadge: true,
+      presentSound: true,
+    );
+
+    const details = NotificationDetails(
+      android: androidDetails,
+      iOS: iosDetails,
+    );
+
+    await _localNotifications.show(
+      0,
+      'Gold Price Alert',
+      unreadCount == 1
+          ? 'You have a new alert notification'
+          : 'You have $unreadCount new alert notifications',
+      details,
+      payload: 'open_notifications',
+    );
   }
 
   Future<void> _loadData() async {
@@ -138,23 +244,11 @@ class _Gold999ScreenState extends State<Gold999Screen> with SingleTickerProvider
     } catch (e) {
       // Silently fail - alerts are optional
     }
+    // Also check unread count when loading alerts
+    _checkUnreadNotifications();
   }
 
-  void _handleIntervalChange(String intervalStr) {
-    final parts = intervalStr.split(':');
-    if (parts.length == 2) {
-      final newInterval = parts[0];
-      final newDays = int.parse(parts[1]);
-      // Only update if actually changing
-      if (_currentInterval != newInterval || _currentDays != newDays) {
-        setState(() {
-          _currentInterval = newInterval;
-          _currentDays = newDays;
-        });
-        _loadChartData();
-      }
-    }
-  }
+  // Removed - chart is fixed to 24 hours
 
   Future<void> _createAlert(String condition, double targetPrice) async {
     try {
@@ -281,21 +375,63 @@ class _Gold999ScreenState extends State<Gold999Screen> with SingleTickerProvider
                   ],
                 ),
       floatingActionButton: _tabController.index == 1
-          ? FloatingActionButton.extended(
-              onPressed: _currentLTP != null
-                  ? () {
-                      showDialog(
-                        context: context,
-                        builder: (context) => CreateAlertDialog(
-                          currentPrice: _currentLTP!.ltp,
-                          onCreate: _createAlert,
+          ? Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                if (_unreadNotificationCount > 0)
+                  FloatingActionButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const NotificationsScreen(),
                         ),
-                      );
-                    }
-                  : null,
-              icon: const Icon(Icons.add_alert),
-              label: const Text('Create Alert'),
-              backgroundColor: Colors.amber,
+                      ).then((_) => _checkUnreadNotifications());
+                    },
+                    backgroundColor: Colors.red,
+                    child: Stack(
+                      children: [
+                        const Icon(Icons.notifications),
+                        Positioned(
+                          right: 0,
+                          top: 0,
+                          child: Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: const BoxDecoration(
+                              color: Colors.white,
+                              shape: BoxShape.circle,
+                            ),
+                            child: Text(
+                              '$_unreadNotificationCount',
+                              style: const TextStyle(
+                                color: Colors.red,
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                const SizedBox(width: 16),
+                FloatingActionButton.extended(
+                  onPressed: _currentLTP != null
+                      ? () {
+                          showDialog(
+                            context: context,
+                            builder: (context) => CreateAlertDialog(
+                              currentPrice: _currentLTP!.ltp,
+                              onCreate: _createAlert,
+                            ),
+                          );
+                        }
+                      : null,
+                  icon: const Icon(Icons.add_alert),
+                  label: const Text('Create Alert'),
+                  backgroundColor: Colors.amber,
+                ),
+              ],
             )
           : null,
     );
@@ -353,7 +489,6 @@ class _Gold999ScreenState extends State<Gold999Screen> with SingleTickerProvider
               GoldChart(
                 chartData: _chartData!,
                 interval: _currentInterval,
-                onIntervalChanged: _handleIntervalChange,
               )
             else if (_loadingChart)
               const Center(

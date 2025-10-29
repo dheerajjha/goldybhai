@@ -50,7 +50,7 @@ dependencies:
   # UI helpers
   intl: ^0.19.0  # For number and date formatting
   google_fonts: ^6.1.0  # For custom fonts
-  
+
   # Charts for historical price visualization
   fl_chart: ^0.69.0
   
