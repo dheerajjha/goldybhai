@@ -19,11 +19,21 @@ platform :ios do
       git_url: "https://github.com/dheerajjha/ios-certificates"
     )
 
-    # Increment build number
-    # Use build_number from CI environment or auto-increment
+    # Configure App Store Connect API Key (needed for build number increment)
+    api_key = app_store_connect_api_key(
+      key_id: ENV["APP_STORE_CONNECT_API_KEY_ID"],
+      issuer_id: ENV["APP_STORE_CONNECT_API_ISSUER_ID"],
+      key_content: ENV["APP_STORE_CONNECT_API_KEY_CONTENT"],
+      is_key_content_base64: false
+    )
+
+    # Increment build number in CI
     if ENV['CI']
       increment_build_number(
-        build_number: latest_testflight_build_number + 1,
+        build_number: latest_testflight_build_number(
+          api_key: api_key,
+          app_identifier: "com.shoprates.shopRates"
+        ) + 1,
         xcodeproj: "Runner.xcodeproj"
       )
     end
@@ -42,14 +52,6 @@ platform :ios do
           "com.shoprates.shopRates" => "match AppStore com.shoprates.shopRates"
         }
       }
-    )
-
-    # Configure App Store Connect API Key
-    api_key = app_store_connect_api_key(
-      key_id: ENV["APP_STORE_CONNECT_API_KEY_ID"],
-      issuer_id: ENV["APP_STORE_CONNECT_API_ISSUER_ID"],
-      key_content: ENV["APP_STORE_CONNECT_API_KEY_CONTENT"],
-      is_key_content_base64: false
     )
 
     # Upload to TestFlight
