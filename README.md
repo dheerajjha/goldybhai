@@ -1,366 +1,394 @@
-# 🪙 Gold Price Tracker - GOLD 999 WITH GST
+# Gold Price Tracker
 
-A focused, real-time gold price tracking application for monitoring **GOLD 999 WITH GST** (LTP only) with historical charts and price alerts.
+A real-time gold price tracking application with push notifications for price alerts. Tracks **GOLD 999 WITH GST** prices with minimal network load and provides instant alerts when price thresholds are crossed.
 
-## 🎯 Overview
+## Features
 
-This application is specifically designed for tracking **GOLD 999 WITH GST** with:
-- **Real-time price updates** (1-second refresh)
-- **Interactive historical charts** with multiple time periods
-- **Smart price alerts** with efficient backend checking
-- **Clean, user-friendly interface** optimized for worried users
+- 📊 **Real-time Price Tracking**: Live gold price updates (GOLD 999 WITH GST only)
+- 📈 **24-Hour Charts**: Visual price history with AM/PM time format
+- 🔔 **Price Alerts**: Set custom price thresholds with push notifications
+- 📱 **Push Notifications**: FCM-powered notifications (foreground, background, terminated)
+- 🚀 **Lightweight**: Optimized network usage with caching
+- 🌐 **Multi-platform**: iOS, Android, and Web support
 
-## 🚀 Quick Start
+## Tech Stack
+
+### Backend
+- **Node.js** + **Express.js**: REST API server
+- **SQLite3**: Lightweight database
+- **Firebase Admin SDK**: Push notification service
+- **node-cron**: Scheduled tasks for price fetching and alert checking
+
+### Frontend (Flutter)
+- **Flutter**: Cross-platform mobile framework
+- **Provider**: State management
+- **Dio**: HTTP client with caching
+- **fl_chart**: Beautiful charts
+- **Firebase Messaging**: Push notifications
+- **flutter_local_notifications**: Local notifications
+
+### Web Consumer
+- **HTML/CSS/JavaScript**: Simple web interface
+- **Axios**: HTTP client
+- Auto-refresh every 30 seconds
+
+## Project Structure
+
+```
+goldybhai/
+├── backend/                    # Node.js backend
+│   ├── src/
+│   │   ├── server.js          # Main server file
+│   │   ├── database/          # Database migrations and setup
+│   │   ├── services/          # Business logic (rate fetching, alerts, FCM)
+│   │   ├── controllers/       # Request handlers
+│   │   └── routes/            # API routes
+│   ├── test-notification.js   # Test script for push notifications
+│   ├── test-data-only.js      # Test script for data-only messages
+│   └── package.json
+│
+├── app/                        # Flutter mobile app
+│   ├── lib/
+│   │   ├── main.dart          # App entry point
+│   │   ├── screens/           # UI screens
+│   │   ├── services/          # API clients and FCM service
+│   │   ├── models/            # Data models
+│   │   └── widgets/           # Reusable UI components
+│   ├── ios/                   # iOS configuration
+│   ├── android/               # Android configuration
+│   └── pubspec.yaml
+│
+└── web/                        # Web consumer
+    ├── index.html             # Main web page
+    ├── styles.css
+    └── script.js
+```
+
+## Setup Instructions
 
 ### Prerequisites
-- **Node.js** v18+ and npm
-- **Flutter** SDK 3.0+
-- **SQLite3** (pre-installed on macOS/Linux)
+
+- **Node.js** (v16 or higher)
+- **Flutter** (v3.0 or higher)
+- **Firebase Project** (for push notifications)
+- **Apple Developer Account** (for iOS push notifications)
 
 ### Backend Setup
+
+1. **Install dependencies**:
+   ```bash
+   cd backend
+   npm install
+   ```
+
+2. **Configure Firebase**:
+   - Place `firebase-service-account.json` in `backend/` directory
+   - Get this from Firebase Console → Project Settings → Service Accounts
+
+3. **Run database migrations**:
+   ```bash
+   npm run migrate
+   ```
+
+4. **Start the server**:
+   ```bash
+   npm start
+   ```
+
+   Server runs on `http://localhost:3000`
+
+### Flutter App Setup
+
+1. **Install dependencies**:
+   ```bash
+   cd app
+   flutter pub get
+   ```
+
+2. **Configure Firebase**:
+   - iOS: Place `GoogleService-Info.plist` in `app/ios/Runner/`
+   - Android: Place `google-services.json` in `app/android/app/`
+
+3. **Update backend URL** (for physical device):
+   - Edit `app/lib/services/fcm_service.dart`
+   - Edit `app/lib/services/gold999_client.dart`
+   - Replace `localhost` with your machine's IP address
+
+4. **Run the app**:
+   ```bash
+   flutter run
+   ```
+
+### Web Consumer Setup
+
+1. **Update backend URL**:
+   - Edit `web/script.js`
+   - Set `API_URL` to your backend URL
+
+2. **Open in browser**:
+   ```bash
+   open web/index.html
+   ```
+
+## API Endpoints
+
+### Gold 999 Endpoints
+
+```
+GET  /api/gold999/current        # Get current LTP (ultra-lightweight)
+GET  /api/gold999/chart          # Get 24-hour chart data
+GET  /api/gold999/alerts         # Get all alerts
+POST /api/gold999/alerts         # Create new alert
+DELETE /api/gold999/alerts/:id   # Delete alert
+```
+
+### FCM Endpoints
+
+```
+POST /api/fcm/register           # Register FCM token
+POST /api/fcm/unregister         # Unregister FCM token
+```
+
+## Test Scripts
+
+### 1. Test Push Notifications
+
+Send a test notification to a specific device:
+
 ```bash
 cd backend
-npm install
+node test-notification.js "YOUR_FCM_TOKEN"
+```
+
+**What it does**:
+- Sends a test notification with title and body
+- Tests APNs authentication
+- Verifies Firebase → Apple APNs connection
+- Works for both foreground and background states
+
+**Example**:
+```bash
+node test-notification.js "fEu5xPdH7kt3v1uXA_eBAB:APA91b..."
+```
+
+**Output**:
+```
+✅ Successfully sent notification: projects/gold-price-tracker-a04ef/messages/1762087109381721
+Check your iPhone for the notification!
+```
+
+### 2. Test Data-Only Messages
+
+Send a data-only message (bypasses APNs notification payload):
+
+```bash
+cd backend
+node test-data-only.js "YOUR_FCM_TOKEN"
+```
+
+**What it does**:
+- Sends a data-only message without notification payload
+- Tests FCM connectivity without APNs
+- Useful for debugging FCM vs APNs issues
+- App receives data in background handler
+
+### 3. Database Migration
+
+Run database migrations to set up or update schema:
+
+```bash
+cd backend
 npm run migrate
-npm run seed
+```
+
+**What it does**:
+- Creates `rates` table for price data
+- Creates `alerts` table for user alerts
+- Creates `notifications` table for notification history
+- Creates `fcm_tokens` table for device tokens
+- Idempotent (safe to run multiple times)
+
+### 4. Start Backend Server
+
+```bash
+cd backend
 npm start
-# Server runs on http://localhost:3000
 ```
 
-### Mobile App Setup
-```bash
-cd app
-flutter pub get
-flutter run -d chrome  # or iOS/Android
-```
+**What it does**:
+- Starts Express server on port 3000
+- Initializes Firebase Admin SDK
+- Starts cron jobs:
+  - Fetches rates every 5 minutes
+  - Checks alerts every minute
+- Serves static web consumer files
 
-## 📊 API Endpoints
+## Environment Configuration
 
-### GOLD 999 Focused Endpoints
+### Backend
 
-#### `GET /api/gold999/current`
-Ultra-lightweight current LTP endpoint (~150 bytes)
-```bash
-curl http://localhost:3000/api/gold999/current
-```
+The backend uses the following configuration:
 
-#### `GET /api/gold999/chart`
-Aggregated chart data with query parameters:
-- `interval`: `realtime` | `hourly` | `daily` (default: `hourly`)
-- `days`: Number of days (default: 7, max: 30)
-- `limit`: Max points (default: 50, max: 200)
-
-```bash
-curl "http://localhost:3000/api/gold999/chart?interval=hourly&days=7"
-```
-
-#### `GET /api/gold999/latest`
-Full rate details including buy/sell/high/low
-
-#### Alert Endpoints
-- `GET /api/gold999/alerts` - List alerts for GOLD 999
-- `POST /api/gold999/alerts` - Create alert (auto-sets commodity_id = 2)
-- `PUT /api/gold999/alerts/:id` - Update alert
-- `DELETE /api/gold999/alerts/:id` - Delete alert
-
-#### Notification Endpoints
-- `GET /api/gold999/notifications` - Get all notifications
-- `GET /api/gold999/notifications/unread-count` - Get unread count
-- `PUT /api/gold999/notifications/:id/read` - Mark notification as read
-- `PUT /api/gold999/notifications/read-all` - Mark all as read
-
-```bash
-# Create alert
-curl -X POST http://localhost:3000/api/gold999/alerts \
-  -H "Content-Type: application/json" \
-  -d '{"condition": "<", "targetPrice": 120000}'
-
-# Get notifications
-curl http://localhost:3000/api/gold999/notifications
-
-# Get unread count
-curl http://localhost:3000/api/gold999/notifications/unread-count
-```
-
-### Legacy Endpoints (for web app compatibility)
-- `GET /api/commodities` - Get all commodities
-- `GET /api/rates/latest` - Latest rates for all commodities
-- `GET /api/alerts` - Get all alerts
-- `GET /api/preferences` - Get user preferences
-
-See `backend/API.md` for complete API documentation.
-
-## 📱 App Structure
+- **Port**: 3000 (default)
+- **Database**: `backend/src/database/database.sqlite`
+- **Firebase**: `backend/firebase-service-account.json`
 
 ### Flutter App
-```
-app/lib/
-├── main.dart                          # App entry point
-├── screens/
-│   └── gold999_screen.dart            # Main screen with tabs
-├── widgets/
-│   ├── gold_price_display.dart        # Large price display
-│   ├── gold_chart.dart                # Interactive chart
-│   ├── alert_card.dart                # Alert card widget
-│   └── create_alert_dialog.dart      # Alert creation dialog
-└── services/
-    └── gold999_client.dart            # API client with caching
-```
 
-### Backend
-```
-backend/src/
-├── server.js                          # Express server
-├── controllers/
-│   └── gold999Controller.js           # GOLD 999 endpoints
-├── routes/
-│   └── gold999.js                     # Main route
-└── services/
-    ├── rateFetcher.js                 # Rate fetching service
-    └── alertChecker.js                # Alert checking service
-```
+For **physical device** testing, update the base URL in:
 
-## ⚡ Performance Optimizations
+1. `app/lib/services/fcm_service.dart`:
+   ```dart
+   final String _baseUrl = 'http://YOUR_IP:3000';
+   ```
 
-### Refresh Rate
-- **Frontend**: 1-second auto-refresh for current LTP
-- **Backend**: Alert checks every 5 seconds
-- **Cache TTL**: 10 seconds (frontend), 5 seconds (backend)
+2. `app/lib/services/gold999_client.dart`:
+   ```dart
+   Gold999Client({this.baseUrl = 'http://YOUR_IP:3000/api'})
+   ```
 
-### Alert Efficiency
-- **95% reduction in DB queries**: From N+1 queries to 2 queries total
-- **Rate caching**: 5-second TTL prevents repeated DB queries
-- **Batch processing**: Fetch rate once, check all alerts
-- **Focused queries**: Only GOLD 999 alerts checked
-
-### Network Efficiency
-- **Current LTP**: ~150 bytes per request
-- **Chart Data**: ~5-8 KB for 7 days hourly data
-- **Monthly Usage**: ~388 MB (with 1s refresh)
-
-## 🎨 Features
-
-### Price Display
-- Large, prominent LTP display (64px font)
-- Real-time change indicators (green for up, red for down)
-- Percentage change badge
-- Time-based "Updated X ago" text
-
-### Historical Charts
-- Interactive line charts using `fl_chart`
-- Time period selector: 1H, 6H, 1D, 7D, 30D
-- Tap tooltips for exact prices
-- Color-coded trends (green up, red down)
-- Smart Y-axis formatting (e.g., "₹1.24L" for large numbers)
-
-### Alerts & Notifications
-- Create alerts for price thresholds
-- Visual alert cards with enable/disable
-- See triggered alerts with timestamps
-- **Real-time notifications** when alerts trigger
-- **Notification badge** showing unread count
-- **Local push notifications** (native OS notifications)
-- **Notifications screen** to view all alerts
-- Mark notifications as read
-- Easy deletion with confirmation
-
-## 🔧 Technical Stack
-
-### Backend
-- **Node.js** + **Express.js**
-- **SQLite** with proper indexes
-- **SQL aggregation** using `strftime` for efficient queries
-- **In-memory caching** for rate data
-
-### Mobile App
-- **Flutter** + **Dart**
-- **fl_chart** (0.69.0) for charts
-- **SharedPreferences** for local caching
-- **Dio** for API calls with interceptors
-
-## 📊 Database Schema
-
-### Key Tables
-- `commodities`: Commodity information (ID: 2 = GOLD 999 WITH GST)
-- `rates`: Historical rate data with LTP
-- `alerts`: User price alerts (scoped to commodity_id = 2)
-- `notifications`: Alert trigger notifications
-
-### Indexes
-- `idx_rates_commodity_updated` on `(commodity_id, updated_at DESC)`
-- `idx_alerts_commodity` on `commodity_id`
-- `idx_alerts_user_active` on `(user_id, active)`
-
-See `shared/ERD.md` for complete entity-relationship diagram.
-
-## 🐛 Fixes Applied
-
-### Chart Overlaps
-- ✅ Fixed period button selection logic
-- ✅ Increased Y-axis reserved space to 60px
-- ✅ Smart number formatting prevents truncation
-- ✅ Prevents duplicate chart loads
-
-### Code Cleanup
-- ✅ Removed unused API client
-- ✅ Removed unused model files
-- ✅ Consolidated models into `gold999_client.dart`
-- ✅ Focused codebase for GOLD 999 only
-
-## 🧪 Testing
-
-### Backend Tests
+Find your IP:
 ```bash
-cd backend
-npm test
-npm test -- --coverage
+ifconfig en0 | grep "inet " | awk '{print $2}'
 ```
 
-### Flutter Tests
-```bash
-cd app
-flutter analyze
-flutter test
+## Firebase Configuration
+
+### Required Files
+
+1. **Backend**: `firebase-service-account.json`
+   - Download from: Firebase Console → Project Settings → Service Accounts
+   - Click "Generate new private key"
+
+2. **iOS**: `GoogleService-Info.plist`
+   - Download from: Firebase Console → Project Settings → General → iOS apps
+   - Place in: `app/ios/Runner/`
+
+3. **Android**: `google-services.json`
+   - Download from: Firebase Console → Project Settings → General → Android apps
+   - Place in: `app/android/app/`
+
+### APNs Setup (iOS)
+
+1. **Create APNs Key** in Apple Developer Console:
+   - Go to: Certificates, Identifiers & Profiles → Keys
+   - Create new key with "Apple Push Notifications service (APNs)"
+   - Download `AuthKey_XXXXXXXXXX.p8`
+
+2. **Upload to Firebase**:
+   - Go to: Firebase Console → Cloud Messaging → Apple app configuration
+   - Upload the `.p8` file
+   - Enter Key ID and Team ID
+
+3. **Enable in Xcode**:
+   - Open `app/ios/Runner.xcworkspace`
+   - Select Runner target → Signing & Capabilities
+   - Add "Push Notifications" capability
+   - Add "Background Modes" → Enable "Remote notifications"
+
+## How It Works
+
+### 1. Price Fetching
+
+- Backend fetches gold prices every 5 minutes via cron job
+- Stores in SQLite database with timestamp
+- Provides lightweight API endpoints for clients
+
+### 2. Price Alerts
+
+- Users create alerts with target price and direction (above/below)
+- Backend checks alerts every minute
+- When triggered:
+  - Creates notification record
+  - Sends push notification via FCM
+  - Marks alert as triggered
+
+### 3. Push Notifications
+
+**Flow**:
+```
+App Start → FCM Token Generated → Register with Backend → Store in Database
+Alert Triggered → Backend sends FCM message → Firebase → APNs → iPhone
 ```
 
-### Manual Testing
-```bash
-# Health check
-curl http://localhost:3000/health
+**States**:
+- **Foreground**: Local notification displayed
+- **Background**: Push notification from APNs
+- **Terminated**: Push notification wakes app
 
-# Current LTP
-curl http://localhost:3000/api/gold999/current
+### 4. Chart Data
 
-# Chart data
-curl "http://localhost:3000/api/gold999/chart?interval=hourly&days=7"
-```
+- Backend aggregates price data for last 24 hours
+- Returns hourly data points
+- Flutter app renders with `fl_chart`
+- Time formatted in AM/PM
 
-## 🐛 Common Issues
+## Troubleshooting
 
-### Port 3000 already in use
-```bash
-lsof -ti:3000 | xargs kill -9
-# Or change PORT in backend/.env
-```
+### Push Notifications Not Working
 
-### Database locked
-```bash
-cd backend
-rm -rf data/*.db
-npm run migrate && npm run seed
-```
+1. **Check FCM token registration**:
+   ```bash
+   # Look for this in app logs:
+   flutter: 📱 FCM Token: ...
+   flutter: ✅ FCM token registered successfully
+   ```
 
-### Flutter build errors
-```bash
-cd app
-flutter clean
-flutter pub get
-flutter run
-```
+2. **Test with script**:
+   ```bash
+   node test-notification.js "YOUR_TOKEN"
+   ```
 
-### Backend not connecting from Flutter
-- **Web/iOS Simulator**: Use `http://localhost:3000`
-- **Android Emulator**: Use `http://10.0.2.2:3000`
-- **Physical Device**: Use `http://YOUR_COMPUTER_IP:3000`
+3. **Verify APNs setup**:
+   - Check Firebase Console → Cloud Messaging → APNs Authentication Key
+   - Verify Key ID and Team ID match Apple Developer account
 
-## 🔔 Alert & Notification System
+4. **Check iOS capabilities**:
+   - Push Notifications enabled in Xcode
+   - Background Modes → Remote notifications enabled
 
-### How It Works
-1. **Create Alert**: User sets price threshold via UI
-2. **Backend Monitoring**: Checks alerts every 5 seconds
-3. **Trigger Detection**: When price crosses threshold, notification created
-4. **Frontend Polling**: App checks for new notifications every 10 seconds
-5. **Badge Display**: Unread count shown on Alerts tab
-6. **Local Notification**: Native OS notification appears
-7. **View & Mark**: User can view and mark notifications as read
+### App Not Connecting to Backend
 
-### Notification Features
-- ✅ Real-time polling (10-second interval)
-- ✅ Unread badge on Alerts tab
-- ✅ Full notifications screen
-- ✅ Native local notifications
-- ✅ Mark individual/all as read
-- ✅ Automatic badge updates
+1. **For physical device**, use IP address instead of `localhost`
+2. **Check firewall**: Ensure port 3000 is accessible
+3. **Verify backend is running**: `curl http://localhost:3000/api/gold999/current`
 
-### Push Notifications (Future)
-For backend-to-device push notifications (works when app is closed), see `PUSH_NOTIFICATIONS_SETUP.md`:
-- Requires Firebase Cloud Messaging (FCM) setup
-- Android: `google-services.json` config file
-- iOS: `GoogleService-Info.plist` config file
-- Service account key for backend
+### Database Issues
 
-**Current implementation uses local notifications** which work when app is running or in background.
+1. **Reset database**:
+   ```bash
+   rm backend/src/database/database.sqlite
+   npm run migrate
+   ```
 
-## 📝 Notes
+2. **Check migrations**: Look at `backend/src/database/migrate.js`
 
-- All endpoints work alongside existing API (for web app compatibility)
-- Commodity ID = 2 (GOLD 999 WITH GST) is hard-coded throughout
-- Chart data is aggregated server-side for efficiency
-- Alerts automatically scoped to GOLD 999
-- Cache expires appropriately for 1-second refresh
-- Notification polling runs every 10 seconds (non-blocking)
+## Development
 
-## 🔔 Alert Optimization Details
+### Adding New Features
 
-### Current Implementation
-- Alert checker runs every 5 seconds (optimized from 30s)
-- Only checks GOLD 999 alerts (commodity_id = 2)
-- Uses cached rate data (5 second TTL) to avoid repeated DB queries
-- Batch processes all alerts with same price check
+1. **Backend**: Add routes in `backend/src/routes/`
+2. **Flutter**: Add screens in `app/lib/screens/`
+3. **Services**: Add business logic in respective `services/` folders
 
-### Performance Metrics
-**Before Optimization:**
-- Check interval: 30 seconds
-- DB queries per check: N alerts × 1 rate query = N+1 queries
-- Checks all commodities
+### Code Style
 
-**After Optimization:**
-- Check interval: 5 seconds (more responsive)
-- DB queries per check: 1 rate query (cached) + 1 alert query = 2 queries total
-- Checks only GOLD 999
+- **Backend**: ESLint with standard config
+- **Flutter**: Follow Flutter style guide
+- **Commits**: Use conventional commits
 
-**Improvement:**
-- ~95% reduction in database queries
-- 6x faster check frequency
-- Focused on single commodity
-- Cache reduces DB load by ~80%
+## License
 
-## 📈 Data Interpretation
+MIT License - feel free to use this project for learning or commercial purposes.
 
-### Arihant API Format
-- **Column 2** = BUY price (Dealer's buying price)
-- **Column 3** = SELL price (Dealer's selling price)
-- **Column 4** = HIGH (Day's high)
-- **Column 5** = LOW (Day's low)
+## Support
 
-### Our Implementation
-- LTP: Uses buy_price as Last Traded Price
-- Stores all prices for historical tracking
-- Updates every 1 second
+For issues or questions:
+1. Check the troubleshooting section above
+2. Review Firebase Console for configuration issues
+3. Check backend logs for API errors
+4. Review Flutter logs for client-side issues
 
-## 🎯 Key Decisions
+---
 
-### Focus on GOLD 999 Only
-- Hard-coded commodity ID: 2
-- Removed commodity selection UI
-- Simplified API client
-- Optimized backend queries
-
-### LTP Focus
-- All endpoints prioritize LTP over buy/sell/high/low
-- Charts show LTP trends
-- Alerts trigger on LTP changes
-
-### Optimization Strategy
-- Server-side aggregation reduces data transfer
-- Client-side caching for offline support
-- Efficient alert checking with caching
-- Chart data loaded on-demand
-
-## 📄 License
-
-MIT
-
-## ✨ Status
-
-✅ **Production-ready** - Optimized for GOLD 999 focus!
+**Built with ❤️ for real-time gold price tracking**

@@ -44,6 +44,10 @@ dependencies:
   # Local notifications
   flutter_local_notifications: ^17.0.0
 
+  # Firebase Core & Cloud Messaging (using stable versions)
+  firebase_core: ^3.3.0
+  firebase_messaging: ^15.0.4
+
   # Shared preferences for local storage
   shared_preferences: ^2.2.2
 

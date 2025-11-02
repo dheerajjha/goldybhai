@@ -5,6 +5,9 @@ package-lock.json
 # Environment
 .env
 
+# Firebase
+firebase-service-account.json
+
 # Database
 data/
 *.db

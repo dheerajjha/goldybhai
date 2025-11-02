@@ -88,7 +88,24 @@ const migrations = [
   // We'll handle this in code below
 
   `CREATE INDEX IF NOT EXISTS idx_notifications_read
-   ON notifications(read, sent_at DESC)`
+   ON notifications(read, sent_at DESC)`,
+
+  // 9. Create FCM tokens table
+  `CREATE TABLE IF NOT EXISTS fcm_tokens (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    token TEXT UNIQUE NOT NULL,
+    user_id INTEGER,
+    platform TEXT NOT NULL CHECK(platform IN ('ios', 'android')),
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+  )`,
+
+  `CREATE INDEX IF NOT EXISTS idx_fcm_tokens_user
+   ON fcm_tokens(user_id)`,
+
+  `CREATE INDEX IF NOT EXISTS idx_fcm_tokens_token
+   ON fcm_tokens(token)`
 ];
 
 async function migrate() {
@@ -108,7 +125,7 @@ async function migrate() {
     for (let i = 0; i < migrations.length; i++) {
       console.log(`Running migration ${i + 1}/${migrations.length}...`);
       try {
-        await run(migrations[i]);
+      await run(migrations[i]);
       } catch (error) {
         // Skip if already exists (for CREATE IF NOT EXISTS)
         if (error.message.includes('already exists') || 

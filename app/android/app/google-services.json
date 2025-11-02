@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "334493977707",
+    "project_id": "gold-price-tracker-a04ef",
+    "storage_bucket": "gold-price-tracker-a04ef.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:334493977707:android:8bb0ff5c904de9e8d9752e",
+        "android_client_info": {
+          "package_name": "com.shoprates.shop_rates"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAfZtaQWRYpMXGImDrO9EvM6Xl6kF_Hnzw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

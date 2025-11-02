@@ -13,10 +13,12 @@ const ratesRouter = require('./routes/rates');
 const alertsRouter = require('./routes/alerts');
 const preferencesRouter = require('./routes/preferences');
 const gold999Router = require('./routes/gold999');
+const fcmRouter = require('./routes/fcm');
 
 // Import services
 const rateFetcher = require('./services/rateFetcher');
 const alertChecker = require('./services/alertChecker');
+const fcmService = require('./services/fcmService');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -45,6 +47,7 @@ app.use('/api/rates', ratesRouter);
 app.use('/api/alerts', alertsRouter);
 app.use('/api/preferences', preferencesRouter);
 app.use('/api/gold999', gold999Router);
+app.use('/api/fcm', fcmRouter);
 
 // 404 handler for API routes
 app.use('/api/*', (req, res) => {
@@ -92,6 +95,9 @@ async function startServer() {
     // Start rate fetcher service
     console.log('📡 Starting rate fetcher service...');
     rateFetcher.start();
+
+    // Initialize Firebase Admin SDK (for FCM)
+    fcmService.initializeFirebase();
 
     // Start alert checker service
     console.log('🔔 Starting alert checker service...');

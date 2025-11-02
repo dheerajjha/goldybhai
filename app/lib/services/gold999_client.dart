@@ -10,7 +10,7 @@ class Gold999Client {
   static const String _cacheKeyChart = 'gold999_chart';
   static const String _cacheTimestamp = 'gold999_cache_time';
 
-  Gold999Client({this.baseUrl = 'http://localhost:3000/api'}) {
+  Gold999Client({this.baseUrl = 'http://192.168.1.3:3000/api'}) {
     _dio = Dio(BaseOptions(
       baseUrl: baseUrl,
       connectTimeout: const Duration(seconds: 10),

@@ -28,8 +28,11 @@ class GoldChart extends StatelessWidget {
         .map((p) => p.ltp)
         .reduce((a, b) => a > b ? a : b);
     final priceRange = maxPrice - minPrice;
-    final chartMin = minPrice - (priceRange * 0.1);
-    final chartMax = maxPrice + (priceRange * 0.1);
+    
+    // Ensure minimum range to avoid zero interval
+    final effectiveRange = priceRange > 0 ? priceRange : maxPrice * 0.01;
+    final chartMin = minPrice - (effectiveRange * 0.1);
+    final chartMax = maxPrice + (effectiveRange * 0.1);
 
     final isPositiveTrend = chartData.data.last.ltp >= chartData.data.first.ltp;
     final lineColor = isPositiveTrend ? Colors.green : Colors.red;

@@ -1,6 +1,8 @@
 const cron = require('node-cron');
 const { all, run, get } = require('../config/database');
 const { GOLD999_COMMODITY_ID } = require('../controllers/gold999Controller');
+const fcmService = require('./fcmService');
+const { getTokensForNotification, removeInvalidTokens } = require('../controllers/fcmController');
 
 let cronJob = null;
 let cachedRate = null;
@@ -33,6 +35,90 @@ async function getLatestRate(commodityId) {
   }
 
   return rate;
+}
+
+/**
+ * Check if alert condition is met
+ */
+function isAlertTriggered(alert, currentPrice) {
+  if (!currentPrice) return false;
+
+  if (alert.condition === '<') {
+    return currentPrice <= alert.target_price;
+  } else if (alert.condition === '>') {
+    return currentPrice >= alert.target_price;
+  }
+
+  return false;
+}
+
+/**
+ * Create notification for triggered alert
+ */
+async function createNotification(alert, currentPrice) {
+  try {
+    const conditionText = alert.condition === '<' ? 'dropped below' : 'rose above';
+    const message = `${alert.commodity_name} ${conditionText} ₹${alert.target_price.toLocaleString()} (Current: ₹${currentPrice.toLocaleString()})`;
+
+    await run(
+      `INSERT INTO notifications (alert_id, message, sent_at, delivered, read)
+       VALUES (?, ?, CURRENT_TIMESTAMP, 1, 0)`,
+      [alert.id, message]
+    );
+
+    console.log(`🔔 Notification created: ${message}`);
+
+    // Mark alert as triggered
+    await run(
+      `UPDATE alerts SET triggered_at = CURRENT_TIMESTAMP WHERE id = ?`,
+      [alert.id]
+    );
+
+    return { message, alertId: alert.id };
+  } catch (error) {
+    console.error('Error creating notification:', error.message);
+    throw error;
+  }
+}
+
+/**
+ * Send FCM push notifications for triggered alerts
+ */
+async function sendFCMNotifications(triggeredAlerts) {
+  if (!fcmService.isInitialized()) {
+    console.log('⚠️  FCM not initialized, skipping push notifications');
+    return;
+  }
+
+  for (const item of triggeredAlerts) {
+    try {
+      // Get FCM tokens for the user who set the alert
+      const tokens = await getTokensForNotification(item.alert.user_id);
+
+      if (tokens.length === 0) {
+        console.log(`   No FCM tokens found for user ${item.alert.user_id}`);
+        continue;
+      }
+
+      // Send FCM notification
+      const result = await fcmService.sendAlertNotification(
+        tokens,
+        item.alert,
+        item.currentPrice
+      );
+
+      // Remove invalid tokens if any
+      if (result.invalidTokens && result.invalidTokens.length > 0) {
+        await removeInvalidTokens(result.invalidTokens);
+      }
+
+      if (result.successCount > 0) {
+        console.log(`✅ Sent ${result.successCount} FCM notification(s) for alert ${item.alert.id}`);
+      }
+    } catch (error) {
+      console.error(`❌ Error sending FCM for alert ${item.alert.id}:`, error.message);
+    }
+  }
 }
 
 /**
@@ -87,118 +173,9 @@ async function checkAlerts() {
 
     if (triggeredAlerts.length > 0) {
       console.log(`✅ ${triggeredAlerts.length} GOLD 999 alert(s) triggered`);
-    }
-
-    return triggeredAlerts;
-  } catch (error) {
-    console.error('❌ Error checking alerts:', error.message);
-    return [];
-  }
-}
-
-/**
- * Check if alert condition is met
- */
-function isAlertTriggered(alert, currentPrice) {
-  if (!currentPrice) return false;
-
-  if (alert.condition === '<') {
-    return currentPrice <= alert.target_price;
-  } else if (alert.condition === '>') {
-    return currentPrice >= alert.target_price;
-  }
-
-  return false;
-}
-
-/**
- * Create notification for triggered alert
- */
-async function createNotification(alert, currentPrice) {
-  try {
-    const conditionText = alert.condition === '<' ? 'dropped below' : 'rose above';
-    const message = `${alert.commodity_name} ${conditionText} ₹${alert.target_price.toLocaleString()} (Current: ₹${currentPrice.toLocaleString()})`;
-
-    await run(
-      `INSERT INTO notifications (alert_id, message, sent_at, delivered, read)
-       VALUES (?, ?, CURRENT_TIMESTAMP, 1, 0)`,
-      [alert.id, message]
-    );
-
-    console.log(`🔔 Notification created: ${message}`);
-
-    // Mark alert as triggered
-    await run(
-      `UPDATE alerts SET triggered_at = CURRENT_TIMESTAMP WHERE id = ?`,
-      [alert.id]
-    );
-
-    return { message, alertId: alert.id };
-  } catch (error) {
-    console.error('Error creating notification:', error.message);
-    throw error;
-  }
-}
-
-/**
- * Check all active alerts
- */
-async function checkAlerts() {
-  try {
-    console.log('🔍 Checking alerts...');
-
-    // Get all active alerts that haven't been triggered
-    const alerts = await all(
-      `SELECT
-         a.id,
-         a.user_id,
-         a.commodity_id,
-         a.condition,
-         a.target_price,
-         c.name as commodity_name,
-         c.symbol
-       FROM alerts a
-       JOIN commodities c ON a.commodity_id = c.id
-       WHERE a.active = 1 AND a.triggered_at IS NULL`
-    );
-
-    if (alerts.length === 0) {
-      console.log('   No active alerts to check');
-      return [];
-    }
-
-    console.log(`   Checking ${alerts.length} active alert(s)...`);
-
-    const triggeredAlerts = [];
-
-    for (const alert of alerts) {
-      // Get latest rate for this commodity
-      const latestRate = await getLatestRate(alert.commodity_id);
-
-      if (!latestRate) {
-        console.log(`   ⚠️  No rate data for ${alert.commodity_name}`);
-        continue;
-      }
-
-      // Check if alert is triggered
-      const currentPrice = latestRate.ltp || latestRate.buy_price;
-
-      if (isAlertTriggered(alert, currentPrice)) {
-        console.log(`   🎯 Alert triggered: ${alert.commodity_name} ${alert.condition} ${alert.target_price}`);
-
-        const notification = await createNotification(alert, currentPrice);
-        triggeredAlerts.push({
-          alert,
-          notification,
-          currentPrice
-        });
-      }
-    }
-
-    if (triggeredAlerts.length > 0) {
-      console.log(`✅ ${triggeredAlerts.length} alert(s) triggered`);
-    } else {
-      console.log('   ✓ No alerts triggered');
+      
+      // Send FCM push notifications
+      await sendFCMNotifications(triggeredAlerts);
     }
 
     return triggeredAlerts;
@@ -216,11 +193,14 @@ function start() {
 
   console.log(`🔔 Alert checker starting (every ${interval} seconds) - GOLD 999 only`);
 
+  // Initialize Firebase (if not already done)
+  fcmService.initializeFirebase();
+
   // Check immediately on start
   checkAlerts();
 
   // Use setInterval for frequent checks (optimized for 1s refresh)
-  cronJob = setInterval(checkAlerts, interval * 1000);
+    cronJob = setInterval(checkAlerts, interval * 1000);
 }
 
 /**
