@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Gold Price Tracker</string>
+    <string name="notification_channel_name">Price Alerts</string>
+    <string name="notification_channel_description">Notifications for gold price alerts</string>
+</resources>
+
