@@ -11,9 +11,10 @@ class FCMService {
   FCMService._internal();
 
   final FirebaseMessaging _messaging = FirebaseMessaging.instance;
-  final FlutterLocalNotificationsPlugin _localNotifications = FlutterLocalNotificationsPlugin();
+  final FlutterLocalNotificationsPlugin _localNotifications =
+      FlutterLocalNotificationsPlugin();
   String? _fcmToken;
-  final String _baseUrl = 'http://192.168.1.3:3000';
+  final String _baseUrl = 'https://api-goldy.sexy.dog';
 
   /// Initialize FCM and request permissions
   Future<void> initialize() async {
@@ -34,10 +35,13 @@ class FCMService {
 
       if (settings.authorizationStatus == AuthorizationStatus.authorized) {
         debugPrint('✅ User granted notification permission');
-      } else if (settings.authorizationStatus == AuthorizationStatus.provisional) {
+      } else if (settings.authorizationStatus ==
+          AuthorizationStatus.provisional) {
         debugPrint('✅ User granted provisional notification permission');
       } else {
-        debugPrint('❌ User declined or has not accepted notification permission');
+        debugPrint(
+          '❌ User declined or has not accepted notification permission',
+        );
         return;
       }
 
@@ -94,7 +98,7 @@ class FCMService {
     try {
       final prefs = await SharedPreferences.getInstance();
       final lastRegisteredToken = prefs.getString('fcm_token');
-      
+
       // Skip if token hasn't changed
       if (lastRegisteredToken == token) {
         debugPrint('ℹ️ FCM token unchanged, skipping registration');
@@ -102,14 +106,13 @@ class FCMService {
       }
 
       final dioClient = Dio();
-      final platform = defaultTargetPlatform == TargetPlatform.iOS ? 'ios' : 'android';
+      final platform = defaultTargetPlatform == TargetPlatform.iOS
+          ? 'ios'
+          : 'android';
 
       final response = await dioClient.post(
         '$_baseUrl/api/fcm/register',
-        data: {
-          'token': token,
-          'platform': platform,
-        },
+        data: {'token': token, 'platform': platform},
       );
 
       if (response.statusCode == 200 || response.statusCode == 201) {
@@ -125,13 +128,15 @@ class FCMService {
 
   /// Initialize local notifications
   Future<void> _initializeLocalNotifications() async {
-    const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
+    const androidSettings = AndroidInitializationSettings(
+      '@mipmap/ic_launcher',
+    );
     const iosSettings = DarwinInitializationSettings(
       requestAlertPermission: true,
       requestBadgePermission: true,
       requestSoundPermission: true,
     );
-    
+
     const initSettings = InitializationSettings(
       android: androidSettings,
       iOS: iosSettings,
@@ -223,8 +228,7 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   debugPrint('   Title: ${message.notification?.title}');
   debugPrint('   Body: ${message.notification?.body}');
   debugPrint('   Data: ${message.data}');
-  
+
   // Note: Cannot use plugins here (like local notifications)
   // Background messages are handled by the OS
 }
-

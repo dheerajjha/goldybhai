@@ -10,13 +10,15 @@ class Gold999Client {
   static const String _cacheKeyChart = 'gold999_chart';
   static const String _cacheTimestamp = 'gold999_cache_time';
 
-  Gold999Client({this.baseUrl = 'http://192.168.1.3:3000/api'}) {
-    _dio = Dio(BaseOptions(
-      baseUrl: baseUrl,
-      connectTimeout: const Duration(seconds: 10),
-      receiveTimeout: const Duration(seconds: 10),
-      headers: {'Content-Type': 'application/json'},
-    ));
+  Gold999Client({this.baseUrl = 'https://api-goldy.sexy.dog/api'}) {
+    _dio = Dio(
+      BaseOptions(
+        baseUrl: baseUrl,
+        connectTimeout: const Duration(seconds: 10),
+        receiveTimeout: const Duration(seconds: 10),
+        headers: {'Content-Type': 'application/json'},
+      ),
+    );
   }
 
   /// Get current LTP (ultra-lightweight, ~150 bytes)
@@ -34,7 +36,7 @@ class Gold999Client {
 
       final response = await _dio.get('/gold999/current');
       final data = response.data;
-      
+
       final current = CurrentLTP(
         ltp: data['ltp'].toDouble(),
         updatedAt: DateTime.parse(data['updated_at']),
@@ -44,7 +46,7 @@ class Gold999Client {
 
       // Cache it
       await _cacheCurrent(current);
-      
+
       return current;
     } catch (e) {
       // Return cached if available
@@ -62,7 +64,7 @@ class Gold999Client {
   }) async {
     try {
       final cacheKey = '${_cacheKeyChart}_${interval}_$days';
-      
+
       // Try cache first
       if (useCache) {
         final cached = await _getCachedChart(cacheKey);
@@ -84,14 +86,16 @@ class Gold999Client {
 
       final data = response.data;
       final chartData = ChartData.fromJson(data);
-      
+
       // Cache it
       await _cacheChart(cacheKey, chartData);
-      
+
       return chartData;
     } catch (e) {
       // Return cached if available
-      final cached = await _getCachedChart('${_cacheKeyChart}_${interval}_$days');
+      final cached = await _getCachedChart(
+        '${_cacheKeyChart}_${interval}_$days',
+      );
       if (cached != null) return cached;
       throw _handleError(e);
     }
@@ -128,11 +132,14 @@ class Gold999Client {
     int userId = 1,
   }) async {
     try {
-      final response = await _dio.post('/gold999/alerts', data: {
-        'userId': userId,
-        'condition': condition,
-        'targetPrice': targetPrice,
-      });
+      final response = await _dio.post(
+        '/gold999/alerts',
+        data: {
+          'userId': userId,
+          'condition': condition,
+          'targetPrice': targetPrice,
+        },
+      );
       return Alert.fromJson(response.data['data']);
     } catch (e) {
       throw _handleError(e);
@@ -203,7 +210,10 @@ class Gold999Client {
   }
 
   /// Mark notification as read
-  Future<void> markNotificationAsRead(int notificationId, {int userId = 1}) async {
+  Future<void> markNotificationAsRead(
+    int notificationId, {
+    int userId = 1,
+  }) async {
     try {
       await _dio.put(
         '/gold999/notifications/$notificationId/read',
@@ -242,15 +252,12 @@ class Gold999Client {
   }
 
   void _fetchChartData(String interval, int days) {
-    getChartData(interval: interval, days: days, useCache: false)
-        .catchError((e) {
+    getChartData(interval: interval, days: days, useCache: false).catchError((
+      e,
+    ) {
       // Silently ignore errors in background fetch
       return Future<ChartData>.value(
-        ChartData(
-          commodity: {},
-          data: [],
-          metadata: {},
-        ),
+        ChartData(commodity: {}, data: [], metadata: {}),
       );
     });
   }
@@ -267,11 +274,11 @@ class Gold999Client {
       final prefs = await SharedPreferences.getInstance();
       final cached = prefs.getString(_cacheKeyCurrent);
       final timestamp = prefs.getString(_cacheTimestamp);
-      
+
       if (cached != null && timestamp != null) {
         final cacheTime = DateTime.parse(timestamp);
         final age = DateTime.now().difference(cacheTime);
-        
+
         // Use cache if less than 10 seconds old (for 1s refresh)
         if (age.inSeconds < 10) {
           return CurrentLTP.fromJson(jsonDecode(cached));
@@ -375,9 +382,7 @@ class ChartData {
   factory ChartData.fromJson(Map<String, dynamic> json) {
     return ChartData(
       commodity: json['commodity'] as Map<String, dynamic>,
-      data: (json['data'] as List)
-          .map((p) => ChartPoint.fromJson(p))
-          .toList(),
+      data: (json['data'] as List).map((p) => ChartPoint.fromJson(p)).toList(),
       current: json['current'] as Map<String, dynamic>?,
       metadata: json['metadata'] as Map<String, dynamic>,
     );
@@ -399,12 +404,7 @@ class ChartPoint {
   final double? min;
   final double? max;
 
-  ChartPoint({
-    required this.timestamp,
-    required this.ltp,
-    this.min,
-    this.max,
-  });
+  ChartPoint({required this.timestamp, required this.ltp, this.min, this.max});
 
   factory ChartPoint.fromJson(Map<String, dynamic> json) {
     return ChartPoint(
@@ -416,12 +416,7 @@ class ChartPoint {
   }
 
   Map<String, dynamic> toJson() {
-    return {
-      'timestamp': timestamp,
-      'ltp': ltp,
-      'min': min,
-      'max': max,
-    };
+    return {'timestamp': timestamp, 'ltp': ltp, 'min': min, 'max': max};
   }
 
   DateTime get dateTime {
@@ -524,10 +519,7 @@ class NotificationList {
   final List<AppNotification> notifications;
   final int unreadCount;
 
-  NotificationList({
-    required this.notifications,
-    required this.unreadCount,
-  });
+  NotificationList({required this.notifications, required this.unreadCount});
 
   factory NotificationList.fromJson(Map<String, dynamic> json) {
     return NotificationList(
@@ -578,4 +570,3 @@ class AppNotification {
     );
   }
 }
-
