@@ -5,8 +5,13 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:intl/intl.dart' as intl;
 
+import 'app_localizations_bn.dart';
 import 'app_localizations_en.dart';
+import 'app_localizations_gu.dart';
 import 'app_localizations_hi.dart';
+import 'app_localizations_mr.dart';
+import 'app_localizations_ta.dart';
+import 'app_localizations_te.dart';
 
 // ignore_for_file: type=lint
 
@@ -94,8 +99,13 @@ abstract class AppLocalizations {
 
   /// A list of this localizations delegate's supported locales.
   static const List<Locale> supportedLocales = <Locale>[
+    Locale('bn'),
     Locale('en'),
+    Locale('gu'),
     Locale('hi'),
+    Locale('mr'),
+    Locale('ta'),
+    Locale('te'),
   ];
 
   /// The title of the application
@@ -259,8 +269,15 @@ class _AppLocalizationsDelegate
   }
 
   @override
-  bool isSupported(Locale locale) =>
-      <String>['en', 'hi'].contains(locale.languageCode);
+  bool isSupported(Locale locale) => <String>[
+    'bn',
+    'en',
+    'gu',
+    'hi',
+    'mr',
+    'ta',
+    'te',
+  ].contains(locale.languageCode);
 
   @override
   bool shouldReload(_AppLocalizationsDelegate old) => false;
@@ -269,10 +286,20 @@ class _AppLocalizationsDelegate
 AppLocalizations lookupAppLocalizations(Locale locale) {
   // Lookup logic when only language code is specified.
   switch (locale.languageCode) {
+    case 'bn':
+      return AppLocalizationsBn();
     case 'en':
       return AppLocalizationsEn();
+    case 'gu':
+      return AppLocalizationsGu();
     case 'hi':
       return AppLocalizationsHi();
+    case 'mr':
+      return AppLocalizationsMr();
+    case 'ta':
+      return AppLocalizationsTa();
+    case 'te':
+      return AppLocalizationsTe();
   }
 
   throw FlutterError(

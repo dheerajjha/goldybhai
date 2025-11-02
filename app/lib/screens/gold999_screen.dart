@@ -1,10 +1,14 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../services/gold999_client.dart';
 import '../widgets/gold_price_display.dart';
 import '../widgets/gold_chart.dart';
 import '../widgets/alert_card.dart';
 import '../widgets/create_alert_dialog.dart';
+import '../widgets/language_switcher.dart';
+import '../l10n/app_localizations.dart';
+import '../main.dart';
 import 'notifications_screen.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
@@ -41,11 +45,15 @@ class _Gold999ScreenState extends State<Gold999Screen> with SingleTickerProvider
   // Local notifications
   final FlutterLocalNotificationsPlugin _localNotifications =
       FlutterLocalNotificationsPlugin();
+  
+  // Language selection
+  String _currentLocale = 'en';
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    _loadSavedLocale();
     _initializeLocalNotifications();
     _loadData();
     _setupAutoRefresh();
@@ -58,6 +66,41 @@ class _Gold999ScreenState extends State<Gold999Screen> with SingleTickerProvider
     _notificationPollTimer?.cancel();
     _tabController.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadSavedLocale() async {
+    final prefs = await SharedPreferences.getInstance();
+    final savedLocale = prefs.getString('app_locale') ?? 'en';
+    if (mounted) {
+      setState(() {
+        _currentLocale = savedLocale;
+      });
+    }
+  }
+
+  Future<void> _changeLanguage(String locale) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('app_locale', locale);
+    if (mounted) {
+      setState(() {
+        _currentLocale = locale;
+      });
+      
+      // Notify the app to change locale
+      final localeProvider = context.findAncestorWidgetOfExactType<LocaleProvider>();
+      if (localeProvider != null) {
+        localeProvider.setLocale(Locale(locale));
+      }
+      
+      // Show snackbar
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Language changed to ${LanguageSwitcher.languages[locale]!['native']}'),
+          duration: const Duration(seconds: 2),
+          backgroundColor: Colors.green,
+        ),
+      );
+    }
   }
 
   Future<void> _initializeLocalNotifications() async {
@@ -292,20 +335,21 @@ class _Gold999ScreenState extends State<Gold999Screen> with SingleTickerProvider
   }
 
   Future<void> _deleteAlert(int alertId) async {
+    final l10n = AppLocalizations.of(context);
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete Alert?'),
-        content: const Text('Are you sure you want to delete this alert?'),
+        title: Text(l10n?.deleteAlert ?? 'Delete Alert?'),
+        content: Text(l10n?.deleteAlertConfirm ?? 'Are you sure you want to delete this alert?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
+            child: Text(l10n?.cancel ?? 'Cancel'),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
             style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Delete'),
+            child: Text(l10n?.delete ?? 'Delete'),
           ),
         ],
       ),
@@ -338,28 +382,34 @@ class _Gold999ScreenState extends State<Gold999Screen> with SingleTickerProvider
     return Scaffold(
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
-        title: const Text(
-          'Gold Price Tracker',
-          style: TextStyle(fontWeight: FontWeight.bold),
+        title: Text(
+          AppLocalizations.of(context)?.appTitle ?? 'Gold Price Tracker',
+          style: const TextStyle(fontWeight: FontWeight.bold),
         ),
         backgroundColor: Colors.amber,
         foregroundColor: Colors.grey[900],
         elevation: 0,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _loadData,
-            tooltip: 'Refresh',
+          LanguageSwitcher(
+            currentLocale: _currentLocale,
+            onLanguageChanged: _changeLanguage,
           ),
+          const SizedBox(width: 8),
         ],
         bottom: TabBar(
           controller: _tabController,
           labelColor: Colors.grey[900],
           unselectedLabelColor: Colors.grey[600],
           indicatorColor: Colors.grey[900],
-          tabs: const [
-            Tab(icon: Icon(Icons.show_chart), text: 'Price'),
-            Tab(icon: Icon(Icons.notifications), text: 'Alerts'),
+          tabs: [
+            Tab(
+              icon: const Icon(Icons.show_chart),
+              text: AppLocalizations.of(context)?.priceTab ?? 'Price',
+            ),
+            Tab(
+              icon: const Icon(Icons.notifications),
+              text: AppLocalizations.of(context)?.alertsTab ?? 'Alerts',
+            ),
           ],
         ),
       ),
@@ -428,7 +478,7 @@ class _Gold999ScreenState extends State<Gold999Screen> with SingleTickerProvider
                         }
                       : null,
                   icon: const Icon(Icons.add_alert),
-                  label: const Text('Create Alert'),
+                  label: Text(AppLocalizations.of(context)?.createAlert ?? 'Create Alert'),
                   backgroundColor: Colors.amber,
                 ),
               ],
@@ -521,14 +571,14 @@ class _Gold999ScreenState extends State<Gold999Screen> with SingleTickerProvider
                   Icon(Icons.notifications_off, size: 64, color: Colors.grey[400]),
                   const SizedBox(height: 16),
                   Text(
-                    'No alerts set',
+                    AppLocalizations.of(context)?.noAlertsYet ?? 'No alerts set',
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
                           color: Colors.grey[600],
                         ),
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Create an alert to get notified\nwhen price changes',
+                    AppLocalizations.of(context)?.createFirstAlert ?? 'Create an alert to get notified\nwhen price changes',
                     textAlign: TextAlign.center,
                     style: TextStyle(color: Colors.grey[500]),
                   ),

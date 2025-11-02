@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-// import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'screens/gold999_screen.dart';
 import 'services/fcm_service.dart';
-// import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'l10n/app_localizations.dart';
 
 /// Background message handler - must be top-level function
 @pragma('vm:entry-point')
@@ -33,26 +33,44 @@ void main() async {
   runApp(const MyApp());
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   const MyApp({super.key});
+
+  @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  Locale _locale = const Locale('en');
+
+  @override
+  void initState() {
+    super.initState();
+    _loadLocale();
+  }
+
+  Future<void> _loadLocale() async {
+    final prefs = await SharedPreferences.getInstance();
+    final savedLocale = prefs.getString('app_locale') ?? 'en';
+    setState(() {
+      _locale = Locale(savedLocale);
+    });
+  }
+
+  void _setLocale(Locale locale) {
+    setState(() {
+      _locale = locale;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Gold Price Tracker',
       debugShowCheckedModeBanner: false,
-
-      // Localization (temporarily disabled - uncomment after flutter pub get generates files)
-      // localizationsDelegates: const [
-      //   AppLocalizations.delegate,
-      //   GlobalMaterialLocalizations.delegate,
-      //   GlobalWidgetsLocalizations.delegate,
-      //   GlobalCupertinoLocalizations.delegate,
-      // ],
-      // supportedLocales: const [
-      //   Locale('en'), // English
-      //   Locale('hi'), // Hindi
-      // ],
+      locale: _locale,
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
           seedColor: Colors.amber,
@@ -67,7 +85,28 @@ class MyApp extends StatelessWidget {
           ),
         ),
       ),
-      home: const Gold999Screen(),
+      home: LocaleProvider(
+        setLocale: _setLocale,
+        child: const Gold999Screen(),
+      ),
     );
   }
+}
+
+/// Provider to allow child widgets to change locale
+class LocaleProvider extends InheritedWidget {
+  final Function(Locale) setLocale;
+
+  const LocaleProvider({
+    super.key,
+    required this.setLocale,
+    required super.child,
+  });
+
+  static LocaleProvider? of(BuildContext context) {
+    return context.dependOnInheritedWidgetOfExactType<LocaleProvider>();
+  }
+
+  @override
+  bool updateShouldNotify(LocaleProvider oldWidget) => false;
 }
