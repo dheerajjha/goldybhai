@@ -67,6 +67,7 @@ const migrations = [
     message TEXT NOT NULL,
     sent_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     delivered BOOLEAN DEFAULT 0,
+    read BOOLEAN DEFAULT 0,
     FOREIGN KEY (alert_id) REFERENCES alerts(id) ON DELETE CASCADE
   )`,
 
@@ -113,15 +114,7 @@ async function migrate() {
     console.log('Starting database migration...');
     await initDatabase();
 
-    // Check if read column exists, add if not
-    try {
-      await run(`SELECT read FROM notifications LIMIT 1`);
-      console.log('   read column already exists, skipping...');
-    } catch (e) {
-      console.log('   Adding read column to notifications table...');
-      await run(`ALTER TABLE notifications ADD COLUMN read BOOLEAN DEFAULT 0`);
-    }
-
+    
     for (let i = 0; i < migrations.length; i++) {
       console.log(`Running migration ${i + 1}/${migrations.length}...`);
       try {
