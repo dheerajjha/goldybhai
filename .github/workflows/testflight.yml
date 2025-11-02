@@ -24,6 +24,16 @@ jobs:
           channel: 'stable'
           cache: true
 
+      - name: 💾 Cache Flutter Dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ env.PUB_CACHE }}
+            .dart_tool
+          key: ${{ runner.os }}-flutter-pub-${{ hashFiles('**/pubspec.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-flutter-pub-
+
       - name: 📦 Flutter pub get (generates iOS config)
         run: |
           # Detect Flutter project root (where pubspec.yaml is)
@@ -49,6 +59,8 @@ jobs:
         uses: ruby/setup-ruby@v1
         with:
           ruby-version: '3.2'
+          bundler-cache: true
+          working-directory: app/ios/fastlane
 
       # ===== Install Fastlane =====
       - name: 🚀 Install Fastlane dependencies
@@ -78,8 +90,21 @@ jobs:
         run: |
           cd app/ios && pod install --repo-update
 
+      # ===== Cache Xcode Derived Data =====
+      - name: 💾 Cache Xcode Derived Data
+        id: cache-xcode
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/Library/Developer/Xcode/DerivedData
+            app/ios/build
+          key: ${{ runner.os }}-xcode-${{ hashFiles('**/*.swift', '**/*.m', '**/*.h', 'app/ios/Podfile.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-xcode-
+
       # ===== Clean Xcode Build Folder =====
       - name: 🧹 Clean Xcode build folder
+        if: steps.cache-xcode.outputs.cache-hit != 'true'
         run: |
           cd app/ios && xcodebuild clean -workspace Runner.xcworkspace -scheme Runner -configuration Release
 
