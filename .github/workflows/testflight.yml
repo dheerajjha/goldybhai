@@ -1,0 +1,113 @@
+name: 🚀 Deploy to TestFlight
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+
+jobs:
+  deploy-testflight:
+    name: Build and Deploy to TestFlight
+    runs-on: macos-latest
+
+    steps:
+      # ===== Checkout Code =====
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+
+      # ===== Setup Flutter (minimal - just for pub get) =====
+      - name: 🐦 Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: 📦 Flutter pub get (generates iOS config)
+        run: |
+          # Detect Flutter project root (where pubspec.yaml is)
+          if [ -f "pubspec.yaml" ]; then
+            echo "Flutter project found at repository root"
+            flutter pub get
+          elif [ -f "../pubspec.yaml" ]; then
+            echo "Flutter project found one level up"
+            cd .. && flutter pub get
+          else
+            echo "Searching for pubspec.yaml..."
+            PUBSPEC_DIR=$(find . -maxdepth 3 -name "pubspec.yaml" -type f | head -1 | xargs dirname)
+            if [ -n "$PUBSPEC_DIR" ]; then
+              echo "Flutter project found at: $PUBSPEC_DIR"
+              cd "$PUBSPEC_DIR" && flutter pub get
+            else
+              echo "No Flutter project found, skipping pub get"
+            fi
+          fi
+
+      # ===== Setup Ruby Environment =====
+      - name: 💎 Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.2'
+
+      # ===== Install Fastlane =====
+      - name: 🚀 Install Fastlane dependencies
+        run: |
+          if [ -d "app/ios/fastlane" ]; then
+            cd app/ios/fastlane
+            bundle install
+          else
+            echo "⚠️  Fastlane directory not found. Please pull the latest changes from the repository."
+            echo "   Run: git pull origin main"
+            exit 1
+          fi
+
+      # ===== Cache CocoaPods =====
+      - name: 💾 Cache CocoaPods
+        uses: actions/cache@v4
+        with:
+          path: |
+            app/ios/Pods
+            ~/Library/Caches/CocoaPods
+          key: ${{ runner.os }}-pods-${{ hashFiles('app/ios/Podfile.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-pods-
+
+      # ===== Install CocoaPods Dependencies =====
+      - name: 📦 Install CocoaPods dependencies
+        run: |
+          cd app/ios && pod install --repo-update
+
+      # ===== Clean Xcode Build Folder =====
+      - name: 🧹 Clean Xcode build folder
+        run: |
+          cd app/ios && xcodebuild clean -workspace Runner.xcworkspace -scheme Runner -configuration Release
+
+      # ===== Configure App Store Connect API Key =====
+      - name: 🔑 Configure App Store Connect API Key
+        env:
+          APP_STORE_CONNECT_API_KEY_CONTENT: ${{ secrets.APP_STORE_CONNECT_API_KEY_CONTENT }}
+        run: |
+          echo "API Key configured via environment variables"
+
+      # ===== Build and Upload to TestFlight =====
+      - name: 🚢 Build and upload to TestFlight
+        env:
+          APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+          APP_STORE_CONNECT_API_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_API_ISSUER_ID }}
+          APP_STORE_CONNECT_API_KEY_CONTENT: ${{ secrets.APP_STORE_CONNECT_API_KEY_CONTENT }}
+          MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
+          MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GITHUB_TOKEN }}
+        run: |
+          cd app/ios/fastlane
+          bundle exec fastlane beta
+
+      # ===== Upload Build Artifacts =====
+      - name: 📦 Upload build artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-logs
+          path: |
+            app/fastlane/report.xml
+            app/fastlane/logs/
