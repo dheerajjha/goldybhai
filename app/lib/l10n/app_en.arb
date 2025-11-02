@@ -1,0 +1,140 @@
+{
+  "@@locale": "en",
+  "appTitle": "Gold Price Tracker",
+  "@appTitle": {
+    "description": "The title of the application"
+  },
+  
+  "priceTab": "Price",
+  "@priceTab": {
+    "description": "Price tab label"
+  },
+  
+  "alertsTab": "Alerts",
+  "@alertsTab": {
+    "description": "Alerts tab label"
+  },
+  
+  "gold999WithGst": "GOLD 999 WITH GST",
+  "@gold999WithGst": {
+    "description": "Gold commodity name"
+  },
+  
+  "perKg": "1 KG",
+  "@perKg": {
+    "description": "Per kilogram unit"
+  },
+  
+  "updatedAgo": "Updated {time} ago",
+  "@updatedAgo": {
+    "description": "Last update time",
+    "placeholders": {
+      "time": {
+        "type": "String",
+        "example": "5h"
+      }
+    }
+  },
+  
+  "last24Hours": "Last 24 Hours",
+  "@last24Hours": {
+    "description": "Last 24 hours label"
+  },
+  
+  "dataPoints": "{count} data points",
+  "@dataPoints": {
+    "description": "Number of data points in chart",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "24"
+      }
+    }
+  },
+  
+  "createAlert": "Create Alert",
+  "@createAlert": {
+    "description": "Create alert button"
+  },
+  
+  "noAlertsYet": "No alerts yet",
+  "@noAlertsYet": {
+    "description": "Empty state message"
+  },
+  
+  "createFirstAlert": "Create your first price alert to get notified when gold price reaches your target.",
+  "@createFirstAlert": {
+    "description": "Empty state description"
+  },
+  
+  "alertMe": "Alert me when price goes",
+  "@alertMe": {
+    "description": "Alert creation label"
+  },
+  
+  "above": "Above",
+  "@above": {
+    "description": "Above threshold option"
+  },
+  
+  "below": "Below",
+  "@below": {
+    "description": "Below threshold option"
+  },
+  
+  "targetPrice": "Target Price",
+  "@targetPrice": {
+    "description": "Target price field label"
+  },
+  
+  "enterPrice": "Enter price",
+  "@enterPrice": {
+    "description": "Price input hint"
+  },
+  
+  "cancel": "Cancel",
+  "@cancel": {
+    "description": "Cancel button"
+  },
+  
+  "create": "Create",
+  "@create": {
+    "description": "Create button"
+  },
+  
+  "delete": "Delete",
+  "@delete": {
+    "description": "Delete button"
+  },
+  
+  "deleteAlert": "Delete Alert",
+  "@deleteAlert": {
+    "description": "Delete alert dialog title"
+  },
+  
+  "deleteAlertConfirm": "Are you sure you want to delete this alert?",
+  "@deleteAlertConfirm": {
+    "description": "Delete alert confirmation message"
+  },
+  
+  "triggered": "Triggered",
+  "@triggered": {
+    "description": "Alert triggered status"
+  },
+  
+  "active": "Active",
+  "@active": {
+    "description": "Alert active status"
+  },
+  
+  "testNotification": "Test Notification",
+  "@testNotification": {
+    "description": "Test notification title"
+  },
+  
+  "testNotificationBody": "This is a test push notification from your Gold Tracker backend!",
+  "@testNotificationBody": {
+    "description": "Test notification body"
+  }
+}
+

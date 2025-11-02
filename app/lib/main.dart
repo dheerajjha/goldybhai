@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+// import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'screens/gold999_screen.dart';
 import 'services/fcm_service.dart';
+// import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 /// Background message handler - must be top-level function
 @pragma('vm:entry-point')
@@ -13,7 +15,7 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   // Initialize Firebase
   try {
     await Firebase.initializeApp();
@@ -39,6 +41,18 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Gold Price Tracker',
       debugShowCheckedModeBanner: false,
+
+      // Localization (temporarily disabled - uncomment after flutter pub get generates files)
+      // localizationsDelegates: const [
+      //   AppLocalizations.delegate,
+      //   GlobalMaterialLocalizations.delegate,
+      //   GlobalWidgetsLocalizations.delegate,
+      //   GlobalCupertinoLocalizations.delegate,
+      // ],
+      // supportedLocales: const [
+      //   Locale('en'), // English
+      //   Locale('hi'), // Hindi
+      // ],
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
           seedColor: Colors.amber,
@@ -51,8 +65,8 @@ class MyApp extends StatelessWidget {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),
-                    ),
-                  ),
+        ),
+      ),
       home: const Gold999Screen(),
     );
   }
