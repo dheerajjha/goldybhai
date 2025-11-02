@@ -1,0 +1,41 @@
+# Fastlane
+*.ipa
+*.dSYM.zip
+*.mobileprovision
+*.cert
+*.p12
+*.key
+
+# Test output
+test_output/
+build/
+output/
+
+# Derived data
+DerivedData/
+
+# Fastlane reports
+report.xml
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots
+fastlane/test_output
+
+# Deliver temporary files
+fastlane/Deliverfile.tmp
+
+# Snapshot generated screenshots
+screenshots/
+
+# Scan
+fastlane/test_output
+
+# Code signing
+*.cer
+*.p12
+*.certSigningRequest
+*.provisionprofile
+*.mobileprovision
+
+# Match
+fastlane/certs
