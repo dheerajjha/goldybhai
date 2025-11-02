@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:share_plus/share_plus.dart';
+import '../l10n/app_localizations.dart';
 
 /// Large, prominent price display widget for worried users
-class GoldPriceDisplay extends StatelessWidget {
+class GoldPriceDisplay extends StatefulWidget {
   final double ltp;
   final double change;
   final double changePercent;
@@ -17,8 +19,75 @@ class GoldPriceDisplay extends StatelessWidget {
   });
 
   @override
+  State<GoldPriceDisplay> createState() => _GoldPriceDisplayState();
+}
+
+class _GoldPriceDisplayState extends State<GoldPriceDisplay>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _animationController;
+  Animation<Color?>? _colorAnimation;
+  double? _previousLtp;
+
+  @override
+  void initState() {
+    super.initState();
+    _animationController = AnimationController(
+      duration: const Duration(milliseconds: 500),
+      vsync: this,
+    );
+    // Initialize with transparent animation
+    _colorAnimation = AlwaysStoppedAnimation<Color?>(Colors.transparent);
+    _previousLtp = widget.ltp;
+  }
+
+  @override
+  void didUpdateWidget(GoldPriceDisplay oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    
+    // Trigger flash animation when price changes
+    if (oldWidget.ltp != widget.ltp) {
+      final isIncrease = widget.ltp > oldWidget.ltp;
+      _colorAnimation = ColorTween(
+        begin: isIncrease ? Colors.green.withOpacity(0.3) : Colors.red.withOpacity(0.3),
+        end: Colors.transparent,
+      ).animate(_animationController);
+      
+      _animationController.forward(from: 0);
+      _previousLtp = oldWidget.ltp;
+    }
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
+  }
+
+  void _sharePrice() {
+    final priceFormat = NumberFormat.currency(
+      locale: 'en_IN',
+      symbol: '₹',
+      decimalDigits: 0,
+    );
+    final changeSign = widget.change >= 0 ? '+' : '';
+    final message = '''
+🏆 Gold Price Update
+
+GOLD 999 WITH GST (1 KG)
+Price: ${priceFormat.format(widget.ltp)}
+Change: $changeSign${priceFormat.format(widget.change)} (${changeSign}${widget.changePercent.toStringAsFixed(2)}%)
+
+Updated: ${DateFormat('MMM d, h:mm a').format(widget.updatedAt)}
+
+via Gold Price Tracker App
+''';
+    
+    Share.share(message, subject: 'Gold Price Update');
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final isPositive = change >= 0;
+    final isPositive = widget.change >= 0;
     final color = isPositive ? Colors.green : Colors.red;
     final icon = isPositive ? Icons.trending_up : Icons.trending_down;
     
@@ -28,7 +97,16 @@ class GoldPriceDisplay extends StatelessWidget {
       decimalDigits: 0,
     );
 
-    return Container(
+    return AnimatedBuilder(
+      animation: _animationController,
+      builder: (context, child) => Container(
+        decoration: BoxDecoration(
+          color: _colorAnimation?.value ?? Colors.transparent,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: child,
+      ),
+      child: Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         gradient: LinearGradient(
@@ -58,7 +136,7 @@ class GoldPriceDisplay extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'GOLD 999 WITH GST',
+                    AppLocalizations.of(context)?.gold999WithGst ?? 'GOLD 999 WITH GST',
                     style: Theme.of(context).textTheme.titleSmall?.copyWith(
                           color: Colors.grey[700],
                           fontWeight: FontWeight.w600,
@@ -67,7 +145,7 @@ class GoldPriceDisplay extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    '1 KG',
+                    AppLocalizations.of(context)?.perKg ?? '1 KG',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: Colors.grey[600],
                         ),
@@ -87,7 +165,7 @@ class GoldPriceDisplay extends StatelessWidget {
                     Icon(icon, color: color, size: 18),
                     const SizedBox(width: 4),
                     Text(
-                      '${isPositive ? '+' : ''}${changePercent.toStringAsFixed(2)}%',
+                      '${isPositive ? '+' : ''}${widget.changePercent.toStringAsFixed(2)}%',
                       style: TextStyle(
                         color: color,
                         fontWeight: FontWeight.bold,
@@ -115,7 +193,7 @@ class GoldPriceDisplay extends StatelessWidget {
               const SizedBox(width: 4),
               Expanded(
                 child: Text(
-                  NumberFormat('#,##,###').format(ltp),
+                  NumberFormat('#,##,###').format(widget.ltp),
                   style: TextStyle(
                     fontSize: 64,
                     fontWeight: FontWeight.bold,
@@ -142,7 +220,7 @@ class GoldPriceDisplay extends StatelessWidget {
                     Icon(icon, color: color, size: 16),
                     const SizedBox(width: 6),
                     Text(
-                      '${isPositive ? '+' : ''}${priceFormat.format(change)}',
+                      '${isPositive ? '+' : ''}${priceFormat.format(widget.change)}',
                       style: TextStyle(
                         color: color,
                         fontWeight: FontWeight.bold,
@@ -153,8 +231,17 @@ class GoldPriceDisplay extends StatelessWidget {
                 ),
               ),
               const Spacer(),
+              // Share button
+              IconButton(
+                onPressed: _sharePrice,
+                icon: Icon(Icons.share, size: 20, color: Colors.grey[600]),
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+                tooltip: 'Share price',
+              ),
+              const SizedBox(width: 8),
               Text(
-                _formatUpdateTime(updatedAt),
+                _formatUpdateTime(widget.updatedAt, context),
                 style: TextStyle(
                   color: Colors.grey[600],
                   fontSize: 12,
@@ -164,22 +251,27 @@ class GoldPriceDisplay extends StatelessWidget {
           ),
         ],
       ),
+      ),
     );
   }
 
-  String _formatUpdateTime(DateTime time) {
+  String _formatUpdateTime(DateTime time, BuildContext context) {
     final now = DateTime.now();
     final diff = now.difference(time);
+    final l10n = AppLocalizations.of(context);
 
+    String timeStr;
     if (diff.inSeconds < 60) {
-      return 'Updated ${diff.inSeconds}s ago';
+      timeStr = '${diff.inSeconds}s';
     } else if (diff.inMinutes < 60) {
-      return 'Updated ${diff.inMinutes}m ago';
+      timeStr = '${diff.inMinutes}m';
     } else if (diff.inHours < 24) {
-      return 'Updated ${diff.inHours}h ago';
+      timeStr = '${diff.inHours}h';
     } else {
       return DateFormat('MMM d, h:mm a').format(time);
     }
+    
+    return l10n?.updatedAgo(timeStr) ?? 'Updated $timeStr ago';
   }
 }
 

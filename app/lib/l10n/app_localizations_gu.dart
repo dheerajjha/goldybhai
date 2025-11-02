@@ -18,7 +18,7 @@ class AppLocalizationsGu extends AppLocalizations {
   String get alertsTab => 'ચેતવણીઓ';
 
   @override
-  String get gold999WithGst => 'GOLD 999 WITH GST';
+  String get gold999WithGst => 'ગોલ્ડ 999 જીએસટી સાથે';
 
   @override
   String get perKg => '1 કિલો';

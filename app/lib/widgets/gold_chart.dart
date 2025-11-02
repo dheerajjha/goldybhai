@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
 import '../services/gold999_client.dart';
+import '../l10n/app_localizations.dart';
 
 /// Interactive chart widget for GOLD 999 price history (24 hours)
 class GoldChart extends StatelessWidget {
@@ -69,7 +70,7 @@ class GoldChart extends StatelessWidget {
                     Icon(Icons.access_time, size: 16, color: Colors.grey[700]),
                     const SizedBox(width: 8),
                     Text(
-                      'Last 24 Hours',
+                      AppLocalizations.of(context)?.last24Hours ?? 'Last 24 Hours',
                       style: TextStyle(
                         color: Colors.grey[800],
                         fontWeight: FontWeight.w600,
@@ -79,7 +80,7 @@ class GoldChart extends StatelessWidget {
                   ],
                 ),
                 Text(
-                  '${chartData.data.length} data points',
+                  AppLocalizations.of(context)?.dataPoints(chartData.data.length) ?? '${chartData.data.length} data points',
                   style: TextStyle(color: Colors.grey[600], fontSize: 12),
                 ),
               ],

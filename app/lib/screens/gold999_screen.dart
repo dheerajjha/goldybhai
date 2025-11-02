@@ -1,12 +1,14 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:vibration/vibration.dart';
 import '../services/gold999_client.dart';
 import '../widgets/gold_price_display.dart';
 import '../widgets/gold_chart.dart';
 import '../widgets/alert_card.dart';
 import '../widgets/create_alert_dialog.dart';
 import '../widgets/language_switcher.dart';
+import '../widgets/empty_state.dart';
 import '../l10n/app_localizations.dart';
 import '../main.dart';
 import 'notifications_screen.dart';
@@ -79,6 +81,11 @@ class _Gold999ScreenState extends State<Gold999Screen> with SingleTickerProvider
   }
 
   Future<void> _changeLanguage(String locale) async {
+    // Haptic feedback
+    if (await Vibration.hasVibrator() ?? false) {
+      Vibration.vibrate(duration: 50);
+    }
+    
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('app_locale', locale);
     if (mounted) {
@@ -564,26 +571,11 @@ class _Gold999ScreenState extends State<Gold999Screen> with SingleTickerProvider
     return RefreshIndicator(
       onRefresh: _loadAlerts,
       child: _alerts.isEmpty
-          ? Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.notifications_off, size: 64, color: Colors.grey[400]),
-                  const SizedBox(height: 16),
-                  Text(
-                    AppLocalizations.of(context)?.noAlertsYet ?? 'No alerts set',
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          color: Colors.grey[600],
-                        ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    AppLocalizations.of(context)?.createFirstAlert ?? 'Create an alert to get notified\nwhen price changes',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(color: Colors.grey[500]),
-                  ),
-                ],
-              ),
+          ? EmptyState(
+              icon: Icons.notifications_none_outlined,
+              title: AppLocalizations.of(context)?.noAlertsYet ?? 'No alerts yet',
+              message: AppLocalizations.of(context)?.createFirstAlert ?? 
+                  'Create your first price alert to get notified when gold price reaches your target.',
             )
           : ListView.builder(
               padding: const EdgeInsets.all(16),
