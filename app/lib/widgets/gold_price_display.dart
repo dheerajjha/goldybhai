@@ -177,15 +177,15 @@ via Gold Price Tracker App
           ),
           const SizedBox(height: 24),
           Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Text(
                 '₹',
                 style: TextStyle(
-                  fontSize: 48,
+                  fontSize: 36,
                   fontWeight: FontWeight.w300,
                   color: Colors.grey[700],
-                  height: 1,
+                  height: 1.2,
                 ),
               ),
               const SizedBox(width: 4),
@@ -194,11 +194,11 @@ via Gold Price Tracker App
                   value: widget.ltp,
                   duration: const Duration(milliseconds: 600),
                   textStyle: TextStyle(
-                    fontSize: 64,
+                    fontSize: 48,
                     fontWeight: FontWeight.bold,
                     color: Colors.grey[900],
-                    height: 1,
-                    letterSpacing: -2,
+                    height: 1.2,
+                    letterSpacing: -1,
                   ),
                 ),
               ),
