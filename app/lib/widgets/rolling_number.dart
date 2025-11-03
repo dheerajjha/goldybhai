@@ -59,12 +59,10 @@ class _RollingNumberState extends State<RollingNumber>
     return AnimatedBuilder(
       animation: _controller,
       builder: (context, child) {
-        return Flexible(
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: _buildDigits(),
-          ),
+        return Row(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: _buildDigits(),
         );
       },
     );
@@ -154,7 +152,7 @@ class _RollingDigit extends StatelessWidget {
 
     return ClipRect(
       child: SizedBox(
-        width: fontSize * 0.6, // Approximate width for a digit
+        width: fontSize * 0.55, // Slightly narrower to prevent overflow
         height: effectiveHeight,
         child: Stack(
           clipBehavior: Clip.hardEdge,
