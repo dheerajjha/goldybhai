@@ -154,32 +154,29 @@ class _RollingDigit extends StatelessWidget {
     final height = textStyle?.height ?? 1.0;
     final effectiveHeight = fontSize * height;
 
-    return ClipRect(
-      child: SizedBox(
-        height: effectiveHeight,
-        child: OverflowBox(
-          maxWidth: double.infinity,
-          child: Stack(
-            clipBehavior: Clip.hardEdge,
-            children: [
-              // Previous digit sliding out
-              Positioned(
-                top: -curve.value * effectiveHeight * distance.sign,
-                child: Opacity(
-                  opacity: 1 - curve.value,
-                  child: Text('$previousDigit', style: textStyle),
-                ),
+    return SizedBox(
+      height: effectiveHeight,
+      child: ClipRect(
+        child: Stack(
+          clipBehavior: Clip.hardEdge,
+          children: [
+            // Previous digit sliding out
+            Positioned(
+              top: -curve.value * effectiveHeight * distance.sign,
+              child: Opacity(
+                opacity: 1 - curve.value,
+                child: Text('$previousDigit', style: textStyle),
               ),
-              // Current digit sliding in
-              Positioned(
-                top: (1 - curve.value) * effectiveHeight * -distance.sign,
-                child: Opacity(
-                  opacity: curve.value,
-                  child: Text('$currentDigit', style: textStyle),
-                ),
+            ),
+            // Current digit sliding in
+            Positioned(
+              top: (1 - curve.value) * effectiveHeight * -distance.sign,
+              child: Opacity(
+                opacity: curve.value,
+                child: Text('$currentDigit', style: textStyle),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
