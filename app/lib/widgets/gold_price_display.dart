@@ -184,7 +184,8 @@ via Gold Price Tracker App
               final rupeeSize = baseFontSize * 0.75;
               
               return Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.baseline,
+                textBaseline: TextBaseline.alphabetic,
                 children: [
                   Text(
                     '₹',
