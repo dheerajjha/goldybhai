@@ -3,6 +3,7 @@ const router = express.Router();
 const {
   getCurrentLTP,
   getChartData,
+  getLastHourData,
   getLatestRate,
   GOLD999_COMMODITY_ID
 } = require('../controllers/gold999Controller');
@@ -19,6 +20,9 @@ router.get('/current', getCurrentLTP);
 
 // GET /api/gold999/chart - Get chart data with aggregation
 router.get('/chart', getChartData);
+
+// GET /api/gold999/last-hour - Get last 1 hour data with 1-minute intervals
+router.get('/last-hour', getLastHourData);
 
 // GET /api/gold999/latest - Get latest full rate details
 router.get('/latest', getLatestRate);

@@ -220,7 +220,7 @@ class _Gold999ScreenState extends State<Gold999Screen> with SingleTickerProvider
     try {
       await Future.wait([
         _loadCurrentLTP(),
-        _loadChartData(),
+        _loadLastHourData(),
         _loadAlerts(),
       ]);
     } catch (e) {
@@ -241,6 +241,11 @@ class _Gold999ScreenState extends State<Gold999Screen> with SingleTickerProvider
         setState(() {
           _currentLTP = current;
         });
+        
+        // Add to chart for real-time updates
+        if (_currentLTP != null && _chartData != null) {
+          _addChartDataPoint(_currentLTP!.ltp, _currentLTP!.updatedAt);
+        }
       }
     } catch (e) {
       if (mounted && _currentLTP == null) {
@@ -251,36 +256,46 @@ class _Gold999ScreenState extends State<Gold999Screen> with SingleTickerProvider
     }
   }
 
-  Future<void> _loadChartData() async {
-    // Skip if same interval/days already loaded
-    if (_lastLoadedInterval == _currentInterval && 
-        _lastLoadedDays == _currentDays && 
-        _chartData != null) {
-      return;
-    }
-    
+  Future<void> _loadLastHourData() async {
     setState(() => _loadingChart = true);
     try {
-      final chart = await _client.getChartData(
-        interval: _currentInterval,
-        days: _currentDays,
-      );
+      final chart = await _client.getLastHourData();
+      
       if (mounted) {
         setState(() {
           _chartData = chart;
-          _lastLoadedInterval = _currentInterval;
-          _lastLoadedDays = _currentDays;
         });
       }
     } catch (e) {
-      if (mounted && _chartData == null) {
-        // Don't show error if we have cached data
-      }
+      print('Error loading last hour data: $e');
     } finally {
       if (mounted) {
         setState(() => _loadingChart = false);
       }
     }
+  }
+  
+  /// Add new data point to chart (for real-time updates)
+  void _addChartDataPoint(double ltp, DateTime timestamp) {
+    if (_chartData == null) return;
+    
+    // Add new point
+    final newPoint = ChartPoint(ltp: ltp, timestamp: timestamp);
+    final updatedData = List<ChartPoint>.from(_chartData!.data)..add(newPoint);
+    
+    // Keep only last hour of data
+    final oneHourAgo = DateTime.now().subtract(const Duration(hours: 1));
+    final filteredData = updatedData.where((point) => 
+      point.timestamp.isAfter(oneHourAgo)
+    ).toList();
+    
+    setState(() {
+      _chartData = ChartData(
+        data: filteredData,
+        interval: _chartData!.interval,
+        period: _chartData!.period,
+      );
+    });
   }
 
   Future<void> _loadAlerts() async {

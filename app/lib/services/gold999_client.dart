@@ -21,6 +21,38 @@ class Gold999Client {
     );
   }
 
+  /// Get last 1 hour chart data with 1-minute intervals
+  Future<ChartData> getLastHourData() async {
+    try {
+      final response = await _dio.get('/gold999/last-hour');
+      final data = response.data;
+
+      final chartData = ChartData(
+        data: (data['data'] as List).map((item) {
+          return ChartPoint(
+            ltp: item['ltp'].toDouble(),
+            timestamp: DateTime.parse(item['timestamp']),
+          );
+        }).toList(),
+        interval: data['interval'],
+        period: data['period'],
+      );
+
+      // Cache it
+      await _cacheChartData(chartData);
+
+      return chartData;
+    } catch (e) {
+      print('Error fetching last hour data: $e');
+      // Try cache on error
+      final cached = await _getCachedChart();
+      if (cached != null) {
+        return cached;
+      }
+      rethrow;
+    }
+  }
+
   /// Get current LTP (ultra-lightweight, ~150 bytes)
   Future<CurrentLTP> getCurrentLTP({bool useCache = true}) async {
     try {

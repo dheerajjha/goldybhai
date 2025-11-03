@@ -61,6 +61,48 @@ async function getCurrentLTP(req, res) {
 }
 
 /**
+ * Get chart data for last 1 hour with 1-minute intervals
+ * Returns raw data points for accurate 1-hour chart
+ */
+async function getLastHourData(req, res) {
+  try {
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+    
+    const query = `
+      SELECT 
+        ltp,
+        updated_at,
+        strftime('%Y-%m-%d %H:%M:00', updated_at) as time_bucket
+      FROM rates
+      WHERE commodity_id = ?
+        AND updated_at >= ?
+      GROUP BY time_bucket
+      ORDER BY updated_at ASC
+    `;
+    
+    const data = await all(query, [GOLD999_COMMODITY_ID, oneHourAgo]);
+    
+    res.json({
+      success: true,
+      data: data.map(row => ({
+        ltp: row.ltp,
+        timestamp: row.updated_at,
+        time: row.time_bucket
+      })),
+      interval: '1m',
+      period: '1h',
+      count: data.length
+    });
+  } catch (error) {
+    console.error('Error fetching last hour data:', error.message);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+}
+
+/**
  * Get chart data for GOLD 999 with aggregation
  * Supports: realtime, hourly, daily intervals
  */
@@ -241,6 +283,7 @@ async function getLatestRate(req, res) {
 module.exports = {
   getCurrentLTP,
   getChartData,
+  getLastHourData,
   getLatestRate,
   GOLD999_COMMODITY_ID
 };
