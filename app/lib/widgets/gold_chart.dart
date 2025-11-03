@@ -4,12 +4,18 @@ import 'package:intl/intl.dart';
 import '../services/gold999_client.dart';
 import '../l10n/app_localizations.dart';
 
-/// Interactive chart widget for GOLD 999 price history (24 hours)
+/// Interactive chart widget for GOLD 999 price history (1 hour)
 class GoldChart extends StatelessWidget {
   final ChartData chartData;
   final String interval;
+  final String period;
 
-  const GoldChart({super.key, required this.chartData, required this.interval});
+  const GoldChart({
+    super.key,
+    required this.chartData,
+    required this.interval,
+    required this.period,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -218,25 +224,23 @@ class GoldChart extends StatelessWidget {
     );
   }
 
-  String _formatAxisTime(String timestamp) {
+  String _formatAxisTime(DateTime timestamp) {
     try {
-      final date = DateTime.parse(timestamp);
-      // Format with AM/PM for 24-hour view
-      return DateFormat('h a').format(date); // e.g., "1 PM", "6 AM"
+      // Format with minutes for 1-hour view
+      return DateFormat('h:mm').format(timestamp); // e.g., "1:30", "2:45"
     } catch (e) {
       return '';
     }
   }
 
-  String _formatTooltipTime(String timestamp) {
+  String _formatTooltipTime(DateTime timestamp) {
     try {
-      final date = DateTime.parse(timestamp);
       // Format with AM/PM for tooltip
       return DateFormat(
-        'MMM d, h:mm a',
-      ).format(date); // e.g., "Oct 29, 2:30 PM"
+        'h:mm a',
+      ).format(timestamp); // e.g., "2:30 PM"
     } catch (e) {
-      return timestamp;
+      return timestamp.toString();
     }
   }
 }

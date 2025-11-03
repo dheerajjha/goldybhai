@@ -19,10 +19,38 @@ class Gold999Client {
         headers: {'Content-Type': 'application/json'},
       ),
     );
+    
+    // Add logging interceptor
+    _dio.interceptors.add(
+      InterceptorsWrapper(
+        onRequest: (options, handler) {
+          print('🌐 API REQUEST: ${options.method} ${options.uri}');
+          if (options.data != null) {
+            print('📤 Request Data: ${options.data}');
+          }
+          return handler.next(options);
+        },
+        onResponse: (response, handler) {
+          print('✅ API RESPONSE: ${response.statusCode} ${response.requestOptions.uri}');
+          print('📥 Response Data: ${response.data}');
+          return handler.next(response);
+        },
+        onError: (error, handler) {
+          print('❌ API ERROR: ${error.requestOptions.uri}');
+          print('❌ Error: ${error.message}');
+          if (error.response != null) {
+            print('❌ Status: ${error.response?.statusCode}');
+            print('❌ Data: ${error.response?.data}');
+          }
+          return handler.next(error);
+        },
+      ),
+    );
   }
 
   /// Get last 1 hour chart data with 1-minute intervals
   Future<ChartData> getLastHourData() async {
+    print('📊 Fetching last 1 hour chart data...');
     try {
       final response = await _dio.get('/gold999/last-hour');
       final data = response.data;
@@ -38,15 +66,18 @@ class Gold999Client {
         period: data['period'],
       );
 
+      print('✅ Fetched ${chartData.data.length} data points for last hour');
+      
       // Cache it
-      await _cacheChartData(chartData);
+      await _cacheChart(_cacheKeyChart, chartData);
 
       return chartData;
     } catch (e) {
-      print('Error fetching last hour data: $e');
+      print('❌ Error fetching last hour data: $e');
       // Try cache on error
-      final cached = await _getCachedChart();
+      final cached = await _getCachedChart(_cacheKeyChart);
       if (cached != null) {
+        print('📦 Using cached chart data (${cached.data.length} points)');
         return cached;
       }
       rethrow;
@@ -60,6 +91,7 @@ class Gold999Client {
       if (useCache) {
         final cached = await _getCachedCurrent();
         if (cached != null) {
+          print('💰 Using cached LTP: ₹${cached.ltp.toStringAsFixed(0)}');
           // Still fetch fresh data but return cached immediately
           _fetchCurrentLTP(); // Fire and forget
           return cached;
@@ -76,14 +108,20 @@ class Gold999Client {
         changePercent: data['change_percent']?.toDouble() ?? 0.0,
       );
 
+      print('💰 Current LTP: ₹${current.ltp.toStringAsFixed(0)} (${current.changePercent >= 0 ? '+' : ''}${current.changePercent.toStringAsFixed(2)}%)');
+
       // Cache it
       await _cacheCurrent(current);
 
       return current;
     } catch (e) {
+      print('❌ Error fetching current LTP: $e');
       // Return cached if available
       final cached = await _getCachedCurrent();
-      if (cached != null) return cached;
+      if (cached != null) {
+        print('📦 Using cached LTP on error');
+        return cached;
+      }
       throw _handleError(e);
     }
   }
@@ -289,7 +327,7 @@ class Gold999Client {
     ) {
       // Silently ignore errors in background fetch
       return Future<ChartData>.value(
-        ChartData(commodity: {}, data: [], metadata: {}),
+        ChartData(data: [], interval: '1m', period: '1h'),
       );
     });
   }
@@ -399,70 +437,51 @@ class CurrentLTP {
 }
 
 class ChartData {
-  final Map<String, dynamic> commodity;
   final List<ChartPoint> data;
-  final Map<String, dynamic>? current;
-  final Map<String, dynamic> metadata;
+  final String interval;
+  final String period;
 
   ChartData({
-    required this.commodity,
     required this.data,
-    this.current,
-    required this.metadata,
+    required this.interval,
+    required this.period,
   });
 
   factory ChartData.fromJson(Map<String, dynamic> json) {
     return ChartData(
-      commodity: json['commodity'] as Map<String, dynamic>,
       data: (json['data'] as List).map((p) => ChartPoint.fromJson(p)).toList(),
-      current: json['current'] as Map<String, dynamic>?,
-      metadata: json['metadata'] as Map<String, dynamic>,
+      interval: json['interval'] as String,
+      period: json['period'] as String,
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
-      'commodity': commodity,
       'data': data.map((p) => p.toJson()).toList(),
-      'current': current,
-      'metadata': metadata,
+      'interval': interval,
+      'period': period,
     };
   }
 }
 
 class ChartPoint {
-  final String timestamp;
+  final DateTime timestamp;
   final double ltp;
-  final double? min;
-  final double? max;
 
-  ChartPoint({required this.timestamp, required this.ltp, this.min, this.max});
+  ChartPoint({required this.timestamp, required this.ltp});
 
   factory ChartPoint.fromJson(Map<String, dynamic> json) {
     return ChartPoint(
-      timestamp: json['timestamp'] as String,
+      timestamp: DateTime.parse(json['timestamp'] as String),
       ltp: json['ltp'].toDouble(),
-      min: json['min']?.toDouble(),
-      max: json['max']?.toDouble(),
     );
   }
 
   Map<String, dynamic> toJson() {
-    return {'timestamp': timestamp, 'ltp': ltp, 'min': min, 'max': max};
-  }
-
-  DateTime get dateTime {
-    try {
-      // Handle both date format and datetime format
-      if (timestamp.contains('T') || timestamp.contains(' ')) {
-        return DateTime.parse(timestamp);
-      } else {
-        // Date only format
-        return DateTime.parse('$timestamp 00:00:00');
-      }
-    } catch (e) {
-      return DateTime.now();
-    }
+    return {
+      'timestamp': timestamp.toIso8601String(),
+      'ltp': ltp,
+    };
   }
 }
 

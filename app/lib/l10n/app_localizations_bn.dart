@@ -29,7 +29,7 @@ class AppLocalizationsBn extends AppLocalizations {
   }
 
   @override
-  String get last24Hours => 'শেষ ২৪ ঘন্টা';
+  String get last24Hours => 'শেষ ১ ঘন্টা';
 
   @override
   String dataPoints(int count) {

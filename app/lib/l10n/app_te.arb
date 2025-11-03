@@ -6,7 +6,7 @@
   "gold999WithGst": "గోల్డ్ 999 GST తో",
   "perKg": "1 కిలో",
   "updatedAgo": "{time} క్రితం నవీకరించబడింది",
-  "last24Hours": "గత 24 గంటలు",
+  "last24Hours": "గత 1 గంట",
   "dataPoints": "{count} డేటా పాయింట్లు",
   "createAlert": "హెచ్చరికను సృష్టించండి",
   "noAlertsYet": "ఇంకా హెచ్చరికలు లేవు",

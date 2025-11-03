@@ -29,7 +29,7 @@ class AppLocalizationsTa extends AppLocalizations {
   }
 
   @override
-  String get last24Hours => 'கடந்த 24 மணி நேரம்';
+  String get last24Hours => 'கடந்த 1 மணி நேரம்';
 
   @override
   String dataPoints(int count) {

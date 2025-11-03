@@ -147,7 +147,7 @@ abstract class AppLocalizations {
   /// Last 24 hours label
   ///
   /// In en, this message translates to:
-  /// **'Last 24 Hours'**
+  /// **'Last 1 Hour'**
   String get last24Hours;
 
   /// Number of data points in chart

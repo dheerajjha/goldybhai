@@ -36,7 +36,7 @@
     }
   },
   
-  "last24Hours": "Last 24 Hours",
+  "last24Hours": "Last 1 Hour",
   "@last24Hours": {
     "description": "Last 24 hours label"
   },

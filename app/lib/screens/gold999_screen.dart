@@ -557,10 +557,18 @@ class _Gold999ScreenState extends State<Gold999Screen> with SingleTickerProvider
                 updatedAt: _currentLTP!.updatedAt,
               ),
             const SizedBox(height: 24),
+            Text(
+              l10n?.last24Hours ?? 'Last 1 Hour',
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+            ),
+            const SizedBox(height: 16),
             if (_chartData != null)
               GoldChart(
                 chartData: _chartData!,
-                interval: _currentInterval,
+                interval: _chartData!.interval,
+                period: _chartData!.period,
               )
             else if (_loadingChart)
               const Center(
