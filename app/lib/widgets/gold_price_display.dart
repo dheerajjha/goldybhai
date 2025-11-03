@@ -27,7 +27,6 @@ class _GoldPriceDisplayState extends State<GoldPriceDisplay>
     with SingleTickerProviderStateMixin {
   late AnimationController _animationController;
   Animation<Color?>? _colorAnimation;
-  String _timeAgo = '';
 
   @override
   void initState() {
@@ -38,25 +37,6 @@ class _GoldPriceDisplayState extends State<GoldPriceDisplay>
     );
     // Initialize with transparent animation
     _colorAnimation = AlwaysStoppedAnimation<Color?>(Colors.transparent);
-    _updateTimeAgo();
-    
-    // Update time every second
-    Future.doWhile(() async {
-      await Future.delayed(const Duration(seconds: 1));
-      if (mounted) {
-        _updateTimeAgo();
-        return true;
-      }
-      return false;
-    });
-  }
-
-  void _updateTimeAgo() {
-    if (mounted) {
-      setState(() {
-        _timeAgo = _formatUpdateTime(widget.updatedAt, context);
-      });
-    }
   }
 
   @override
@@ -72,11 +52,6 @@ class _GoldPriceDisplayState extends State<GoldPriceDisplay>
       ).animate(_animationController);
       
       _animationController.forward(from: 0);
-    }
-    
-    // Update time if updatedAt changed
-    if (oldWidget.updatedAt != widget.updatedAt) {
-      _updateTimeAgo();
     }
   }
 
@@ -273,12 +248,27 @@ via Gold Price Tracker App
                 tooltip: 'Share price',
               ),
               const SizedBox(width: 8),
-              Text(
-                _timeAgo,
-                style: TextStyle(
-                  color: Colors.grey[600],
-                  fontSize: 12,
-                ),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 6,
+                    height: 6,
+                    decoration: BoxDecoration(
+                      color: Colors.green,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    'Live Updating',
+                    style: TextStyle(
+                      color: Colors.grey[600],
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
               ),
             ],
           ),

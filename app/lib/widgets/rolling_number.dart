@@ -154,8 +154,8 @@ class _RollingDigit extends StatelessWidget {
     final height = textStyle?.height ?? 1.0;
     final effectiveHeight = fontSize * height;
     
-    // Estimate digit width (monospace-like)
-    final digitWidth = fontSize * 0.6;
+    // Estimate digit width (wider for digits like 8, 9)
+    final digitWidth = fontSize * 0.7;
 
     return SizedBox(
       width: digitWidth,
