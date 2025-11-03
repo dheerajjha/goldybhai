@@ -59,10 +59,12 @@ class _RollingNumberState extends State<RollingNumber>
     return AnimatedBuilder(
       animation: _controller,
       builder: (context, child) {
-        return Row(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: _buildDigits(),
+        return Flexible(
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: _buildDigits(),
+          ),
         );
       },
     );
