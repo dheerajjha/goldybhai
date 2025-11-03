@@ -176,33 +176,42 @@ via Gold Price Tracker App
             ],
           ),
           const SizedBox(height: 24),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Text(
-                '₹',
-                style: TextStyle(
-                  fontSize: 36,
-                  fontWeight: FontWeight.w300,
-                  color: Colors.grey[700],
-                  height: 1.2,
-                ),
-              ),
-              const SizedBox(width: 4),
-              Expanded(
-                child: RollingCurrencyNumber(
-                  value: widget.ltp,
-                  duration: const Duration(milliseconds: 600),
-                  textStyle: TextStyle(
-                    fontSize: 48,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.grey[900],
-                    height: 1.2,
-                    letterSpacing: -1,
+          LayoutBuilder(
+            builder: (context, constraints) {
+              // Responsive font size based on available width
+              final screenWidth = constraints.maxWidth;
+              final baseFontSize = screenWidth * 0.15; // 15% of width
+              final rupeeSize = baseFontSize * 0.75;
+              
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Text(
+                    '₹',
+                    style: TextStyle(
+                      fontSize: rupeeSize,
+                      fontWeight: FontWeight.w300,
+                      color: Colors.grey[700],
+                      height: 1.2,
+                    ),
                   ),
-                ),
-              ),
-            ],
+                  const SizedBox(width: 4),
+                  Expanded(
+                    child: RollingCurrencyNumber(
+                      value: widget.ltp,
+                      duration: const Duration(milliseconds: 600),
+                      textStyle: TextStyle(
+                        fontSize: baseFontSize,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.grey[900],
+                        height: 1.2,
+                        letterSpacing: -1,
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            },
           ),
           const SizedBox(height: 16),
           Row(
