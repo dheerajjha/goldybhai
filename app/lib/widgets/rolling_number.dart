@@ -59,10 +59,14 @@ class _RollingNumberState extends State<RollingNumber>
     return AnimatedBuilder(
       animation: _controller,
       builder: (context, child) {
-        return Row(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: _buildDigits(),
+        return FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.centerLeft,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: _buildDigits(),
+          ),
         );
       },
     );
@@ -152,30 +156,30 @@ class _RollingDigit extends StatelessWidget {
 
     return ClipRect(
       child: SizedBox(
-        width: fontSize * 0.55, // Slightly narrower to prevent overflow
         height: effectiveHeight,
-        child: Stack(
-          clipBehavior: Clip.hardEdge,
-          children: [
-            // Previous digit sliding out
-            Positioned(
-              left: 0,
-              top: -curve.value * effectiveHeight * distance.sign,
-              child: Opacity(
-                opacity: 1 - curve.value,
-                child: Text('$previousDigit', style: textStyle),
+        child: OverflowBox(
+          maxWidth: double.infinity,
+          child: Stack(
+            clipBehavior: Clip.hardEdge,
+            children: [
+              // Previous digit sliding out
+              Positioned(
+                top: -curve.value * effectiveHeight * distance.sign,
+                child: Opacity(
+                  opacity: 1 - curve.value,
+                  child: Text('$previousDigit', style: textStyle),
+                ),
               ),
-            ),
-            // Current digit sliding in
-            Positioned(
-              left: 0,
-              top: (1 - curve.value) * effectiveHeight * -distance.sign,
-              child: Opacity(
-                opacity: curve.value,
-                child: Text('$currentDigit', style: textStyle),
+              // Current digit sliding in
+              Positioned(
+                top: (1 - curve.value) * effectiveHeight * -distance.sign,
+                child: Opacity(
+                  opacity: curve.value,
+                  child: Text('$currentDigit', style: textStyle),
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
