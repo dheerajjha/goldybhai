@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
 import '../l10n/app_localizations.dart';
+import 'rolling_number.dart';
 
 /// Large, prominent price display widget for worried users
 class GoldPriceDisplay extends StatefulWidget {
@@ -26,7 +27,6 @@ class _GoldPriceDisplayState extends State<GoldPriceDisplay>
     with SingleTickerProviderStateMixin {
   late AnimationController _animationController;
   Animation<Color?>? _colorAnimation;
-  double? _previousLtp;
 
   @override
   void initState() {
@@ -37,7 +37,6 @@ class _GoldPriceDisplayState extends State<GoldPriceDisplay>
     );
     // Initialize with transparent animation
     _colorAnimation = AlwaysStoppedAnimation<Color?>(Colors.transparent);
-    _previousLtp = widget.ltp;
   }
 
   @override
@@ -53,7 +52,6 @@ class _GoldPriceDisplayState extends State<GoldPriceDisplay>
       ).animate(_animationController);
       
       _animationController.forward(from: 0);
-      _previousLtp = oldWidget.ltp;
     }
   }
 
@@ -192,9 +190,10 @@ via Gold Price Tracker App
               ),
               const SizedBox(width: 4),
               Expanded(
-                child: Text(
-                  NumberFormat('#,##,###').format(widget.ltp),
-                  style: TextStyle(
+                child: RollingCurrencyNumber(
+                  value: widget.ltp,
+                  duration: const Duration(milliseconds: 600),
+                  textStyle: TextStyle(
                     fontSize: 64,
                     fontWeight: FontWeight.bold,
                     color: Colors.grey[900],

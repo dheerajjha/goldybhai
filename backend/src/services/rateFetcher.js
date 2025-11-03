@@ -181,6 +181,14 @@ async function updateRates() {
     const rates = await fetchRatesFromArihant();
     await saveRates(rates);
     console.log(`✨ Rates updated successfully at ${new Date().toISOString()}`);
+    
+    // Trigger alert check immediately after rate update for instant notifications
+    const alertChecker = require('./alertChecker');
+    setImmediate(() => {
+      alertChecker.checkAlerts().catch(err => {
+        console.error('Error in immediate alert check:', err.message);
+      });
+    });
   } catch (error) {
     console.error('❌ Failed to update rates:', error.message);
   }

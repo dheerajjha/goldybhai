@@ -192,6 +192,7 @@ function start() {
   const interval = parseInt(process.env.CHECK_ALERTS_INTERVAL || 5); // Check every 5 seconds
 
   console.log(`🔔 Alert checker starting (every ${interval} seconds) - GOLD 999 only`);
+  console.log(`⚡ Note: Alerts are also checked immediately after each rate update for instant notifications`);
 
   // Initialize Firebase (if not already done)
   fcmService.initializeFirebase();
@@ -200,7 +201,8 @@ function start() {
   checkAlerts();
 
   // Use setInterval for frequent checks (optimized for 1s refresh)
-    cronJob = setInterval(checkAlerts, interval * 1000);
+  // This acts as a backup in case the immediate trigger misses anything
+  cronJob = setInterval(checkAlerts, interval * 1000);
 }
 
 /**
