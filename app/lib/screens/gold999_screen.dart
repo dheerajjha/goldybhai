@@ -541,6 +541,8 @@ class _Gold999ScreenState extends State<Gold999Screen> with SingleTickerProvider
   }
 
   Widget _buildPriceTab() {
+    final l10n = AppLocalizations.of(context);
+    
     return RefreshIndicator(
       onRefresh: _loadData,
       child: SingleChildScrollView(
