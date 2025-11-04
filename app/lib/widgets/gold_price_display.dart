@@ -27,6 +27,10 @@ class _GoldPriceDisplayState extends State<GoldPriceDisplay>
     with SingleTickerProviderStateMixin {
   late AnimationController _animationController;
   Animation<Color?>? _colorAnimation;
+  
+  // Persist last non-zero change values
+  double _displayedChange = 0.0;
+  double _displayedChangePercent = 0.0;
 
   @override
   void initState() {
@@ -37,11 +41,24 @@ class _GoldPriceDisplayState extends State<GoldPriceDisplay>
     );
     // Initialize with transparent animation
     _colorAnimation = AlwaysStoppedAnimation<Color?>(Colors.transparent);
+    
+    // Initialize with current values
+    _displayedChange = widget.change;
+    _displayedChangePercent = widget.changePercent;
   }
 
   @override
   void didUpdateWidget(GoldPriceDisplay oldWidget) {
     super.didUpdateWidget(oldWidget);
+    
+    // Update displayed values only if new change is not zero
+    // This keeps the last non-zero change visible
+    if (widget.change != 0) {
+      setState(() {
+        _displayedChange = widget.change;
+        _displayedChangePercent = widget.changePercent;
+      });
+    }
     
     // Trigger flash animation when price changes
     if (oldWidget.ltp != widget.ltp) {
@@ -85,13 +102,14 @@ via Gold Price Tracker App
 
   @override
   Widget build(BuildContext context) {
-    final isPositive = widget.change >= 0;
+    // Use displayed values (persisted non-zero values)
+    final isPositive = _displayedChange >= 0;
     final color = isPositive ? Colors.green : Colors.red;
     final icon = isPositive ? Icons.trending_up : Icons.trending_down;
     
     final priceFormat = NumberFormat.currency(
       locale: 'en_IN',
-      symbol: '₹',
+      symbol: '',  // Remove rupee symbol from format to avoid double symbol
       decimalDigits: 0,
     );
 
@@ -150,6 +168,7 @@ via Gold Price Tracker App
                   ),
                 ],
               ),
+              // Always show pill with persisted value
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
@@ -163,7 +182,7 @@ via Gold Price Tracker App
                     Icon(icon, color: color, size: 18),
                     const SizedBox(width: 4),
                     Text(
-                      '${isPositive ? '+' : ''}${widget.changePercent.toStringAsFixed(2)}%',
+                      '${isPositive ? '+' : ''}₹${priceFormat.format(_displayedChange)}',
                       style: TextStyle(
                         color: color,
                         fontWeight: FontWeight.bold,
@@ -216,6 +235,7 @@ via Gold Price Tracker App
           const SizedBox(height: 16),
           Row(
             children: [
+              // Always show pill with persisted value
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
@@ -228,7 +248,7 @@ via Gold Price Tracker App
                     Icon(icon, color: color, size: 16),
                     const SizedBox(width: 6),
                     Text(
-                      '${isPositive ? '+' : ''}${priceFormat.format(widget.change)}',
+                      '${isPositive ? '+' : ''}${_displayedChangePercent.toStringAsFixed(3)}%',
                       style: TextStyle(
                         color: color,
                         fontWeight: FontWeight.bold,

@@ -430,11 +430,21 @@ class CurrentLTP {
   });
 
   factory CurrentLTP.fromJson(Map<String, dynamic> json) {
+    final timestampStr = json['updated_at'] as String;
+    DateTime timestamp;
+
+    // Check if this is from cache (has timezone info) or from API (no timezone)
+    if (timestampStr.contains('+') || timestampStr.contains('Z')) {
+      // From cache: already has timezone info, parse directly
+      timestamp = DateTime.parse(timestampStr);
+    } else {
+      // From API: backend sends UTC without 'Z', add it and convert to local
+      timestamp = DateTime.parse('${timestampStr}Z').toLocal();
+    }
+
     return CurrentLTP(
       ltp: json['ltp'].toDouble(),
-      updatedAt: DateTime.parse(
-        '${json['updated_at']}Z',
-      ).toLocal(), // Parse as UTC, convert to local
+      updatedAt: timestamp,
       change: json['change']?.toDouble() ?? 0.0,
       changePercent: json['change_percent']?.toDouble() ?? 0.0,
     );
@@ -481,10 +491,19 @@ class ChartPoint {
   ChartPoint({required this.timestamp, required this.ltp});
 
   factory ChartPoint.fromJson(Map<String, dynamic> json) {
-    return ChartPoint(
-      timestamp: DateTime.parse(json['timestamp'] as String),
-      ltp: json['ltp'].toDouble(),
-    );
+    final timestampStr = json['timestamp'] as String;
+    DateTime timestamp;
+
+    // Check if this is from cache (has timezone info) or from API (no timezone)
+    if (timestampStr.contains('+') || timestampStr.endsWith('Z')) {
+      // From cache: already has timezone info, parse directly
+      timestamp = DateTime.parse(timestampStr);
+    } else {
+      // From API: backend sends UTC without 'Z', add it and convert to local
+      timestamp = DateTime.parse('${timestampStr}Z').toLocal();
+    }
+
+    return ChartPoint(timestamp: timestamp, ltp: json['ltp'].toDouble());
   }
 
   Map<String, dynamic> toJson() {

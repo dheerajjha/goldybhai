@@ -136,26 +136,38 @@ class GoldChart extends StatelessWidget {
                   leftTitles: AxisTitles(
                     sideTitles: SideTitles(
                       showTitles: true,
-                      reservedSize: 60, // Increased to prevent truncation
+                      reservedSize: 65,
                       interval: (chartMax - chartMin) / 5,
                       getTitlesWidget: (value, meta) {
-                        final priceStr = NumberFormat(
-                          '#,##,###',
-                        ).format(value.toInt());
-                        // Format with 'L' for lakhs if needed
-                        final formatted = priceStr.length > 6
-                            ? '₹${priceStr.substring(0, priceStr.length - 5)}L'
-                            : '₹$priceStr';
+                        // Show full price with Indian formatting to see all digit changes
+                        // Format: 1,24,121 (shows all digits for precision)
+                        final price = value.toInt();
+                        final str = price.toString();
+                        
+                        // Indian numbering: last 3 digits, then groups of 2
+                        String formatted;
+                        if (str.length <= 3) {
+                          formatted = str;
+                        } else if (str.length <= 5) {
+                          formatted = '${str.substring(0, str.length - 3)},${str.substring(str.length - 3)}';
+                        } else {
+                          // For 6+ digits: X,XX,XXX format
+                          final last3 = str.substring(str.length - 3);
+                          final remaining = str.substring(0, str.length - 3);
+                          final middle2 = remaining.substring(remaining.length - 2);
+                          final first = remaining.substring(0, remaining.length - 2);
+                          formatted = '$first,$middle2,$last3';
+                        }
+                        
                         return Padding(
-                          padding: const EdgeInsets.only(right: 8),
+                          padding: const EdgeInsets.only(right: 4),
                           child: Text(
                             formatted,
                             style: TextStyle(
                               color: Colors.grey[600],
-                              fontSize: 10,
+                              fontSize: 9,
+                              fontWeight: FontWeight.w500,
                             ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
                           ),
                         );
                       },
@@ -252,6 +264,11 @@ class GoldChart extends StatelessWidget {
 
   String _formatAxisTime(DateTime timestamp) {
     try {
+      // Debug: Check if timestamp is in correct timezone
+      final now = DateTime.now();
+      final isLocal = timestamp.isUtc == false;
+      print('📊 Chart axis time: $timestamp (isLocal: $isLocal, now: $now)');
+      
       // Format with minutes and AM/PM for clarity
       return DateFormat(
         'h:mm a',

@@ -291,6 +291,8 @@ class _Gold999ScreenState extends State<Gold999Screen>
   void _addChartDataPoint(double ltp, DateTime timestamp) {
     if (_chartData == null || _chartData!.data.isEmpty) return;
 
+    print('🔄 Adding chart point: ltp=$ltp, timestamp=$timestamp, isUtc=${timestamp.isUtc}');
+
     // Only add a new point if it's been at least 1 minute since the last point
     final lastPoint = _chartData!.data.last;
     final timeSinceLastPoint = timestamp.difference(lastPoint.timestamp);
@@ -313,7 +315,7 @@ class _Gold999ScreenState extends State<Gold999Screen>
       return;
     }
 
-    print('🔄 Adding chart point: ltp=$ltp, timestamp=$timestamp');
+    print('🔄 Adding NEW point (>1 min since last)');
 
     // Add new point (it's been more than 1 minute)
     final newPoint = ChartPoint(ltp: ltp, timestamp: timestamp);
@@ -326,6 +328,10 @@ class _Gold999ScreenState extends State<Gold999Screen>
         .toList();
 
     print('🔄 Chart now has ${filteredData.length} points');
+    if (filteredData.isNotEmpty) {
+      print('🔄 First point: ${filteredData.first.timestamp} (isUtc=${filteredData.first.timestamp.isUtc})');
+      print('🔄 Last point: ${filteredData.last.timestamp} (isUtc=${filteredData.last.timestamp.isUtc})');
+    }
 
     setState(() {
       _chartData = ChartData(
