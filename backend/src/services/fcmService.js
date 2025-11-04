@@ -213,8 +213,22 @@ async function sendMulticastNotification(tokens, title, body, data = {}) {
  * @returns {Promise<object>} Send result
  */
 async function sendAlertNotification(tokens, alert, currentPrice) {
-  const title = '🚨 Gold Price Alert';
-  const body = `GOLD 999 price ${alert.condition === '>' ? 'rose above' : 'fell below'} ₹${currentPrice.toLocaleString('en-IN')} (Target: ₹${alert.target_price.toLocaleString('en-IN')})`;
+  // Calculate price change
+  const priceDiff = Math.abs(currentPrice - alert.target_price);
+  const changePercent = ((priceDiff / alert.target_price) * 100).toFixed(2);
+  
+  // Create engaging title and body
+  let title, body;
+  
+  if (alert.condition === '<') {
+    // Price dropped
+    title = '📉 Gold Price Alert!';
+    body = `Price dropped to ₹${currentPrice.toLocaleString('en-IN')} (Your target: ₹${alert.target_price.toLocaleString('en-IN')})`;
+  } else {
+    // Price rose
+    title = '📈 Gold Price Alert!';
+    body = `Price rose to ₹${currentPrice.toLocaleString('en-IN')} (Your target: ₹${alert.target_price.toLocaleString('en-IN')})`;
+  }
   
   const data = {
     type: 'alert',
@@ -223,6 +237,8 @@ async function sendAlertNotification(tokens, alert, currentPrice) {
     currentPrice: currentPrice.toString(),
     targetPrice: alert.target_price.toString(),
     condition: alert.condition,
+    priceDiff: priceDiff.toString(),
+    changePercent: changePercent,
   };
 
   return await sendMulticastNotification(tokens, title, body, data);

@@ -58,8 +58,20 @@ function isAlertTriggered(alert, currentPrice) {
  */
 async function createNotification(alert, currentPrice) {
   try {
-    const conditionText = alert.condition === '<' ? 'dropped below' : 'rose above';
-    const message = `${alert.commodity_name} ${conditionText} ₹${alert.target_price.toLocaleString()} (Current: ₹${currentPrice.toLocaleString()})`;
+    // Calculate price change
+    const priceDiff = Math.abs(currentPrice - alert.target_price);
+    const changePercent = ((priceDiff / alert.target_price) * 100).toFixed(2);
+    
+    // Create engaging message based on condition
+    let message;
+    if (alert.condition === '<') {
+      // Price dropped
+      message = `🔔 Gold Alert: Price dropped to ₹${currentPrice.toLocaleString('en-IN')}! (Target: ₹${alert.target_price.toLocaleString('en-IN')})`;
+    } else {
+      // Price rose
+      message = `🔔 Gold Alert: Price rose to ₹${currentPrice.toLocaleString('en-IN')}! (Target: ₹${alert.target_price.toLocaleString('en-IN')})`;
+    }
+    
     const istTimestamp = formatForSQLite();
 
     await run(
