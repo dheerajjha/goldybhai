@@ -1,8 +1,8 @@
 const { all, get, run } = require('../config/database');
 const { getISTTimeAgo, formatForAPI } = require('../utils/timezone');
 
-// GOLD 999 WITH GST commodity ID (hardcoded for focus)
-const GOLD999_COMMODITY_ID = 2;
+// GOLD 999 WITH GST commodity ID (only commodity in database)
+const GOLD999_COMMODITY_ID = 17;
 
 /**
  * Get current LTP for GOLD 999 (ultra-lightweight)
