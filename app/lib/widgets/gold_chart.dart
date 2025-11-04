@@ -264,11 +264,6 @@ class GoldChart extends StatelessWidget {
 
   String _formatAxisTime(DateTime timestamp) {
     try {
-      // Debug: Check if timestamp is in correct timezone
-      final now = DateTime.now();
-      final isLocal = timestamp.isUtc == false;
-      print('📊 Chart axis time: $timestamp (isLocal: $isLocal, now: $now)');
-      
       // Format with minutes and AM/PM for clarity
       return DateFormat(
         'h:mm a',

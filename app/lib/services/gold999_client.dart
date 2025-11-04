@@ -53,13 +53,9 @@ class Gold999Client {
 
   /// Get last 1 hour chart data with 1-minute intervals
   Future<ChartData> getLastHourData() async {
-    print('📊 Fetching last 1 hour chart data...');
     try {
       final response = await _dio.get('/gold999/last-hour');
       final data = response.data;
-
-      print('📊 Raw API response: ${data.toString().substring(0, 200)}...');
-      print('📊 Data array length: ${(data['data'] as List).length}');
 
       final chartData = ChartData(
         data: (data['data'] as List).map((item) {
@@ -74,18 +70,14 @@ class Gold999Client {
         period: data['period'],
       );
 
-      print('✅ Fetched ${chartData.data.length} data points for last hour');
-
       // Cache it
       await _cacheChart(_cacheKeyChart, chartData);
 
       return chartData;
     } catch (e) {
-      print('❌ Error fetching last hour data: $e');
       // Try cache on error
       final cached = await _getCachedChart(_cacheKeyChart);
       if (cached != null) {
-        print('📦 Using cached chart data (${cached.data.length} points)');
         return cached;
       }
       rethrow;
@@ -99,7 +91,6 @@ class Gold999Client {
       if (useCache) {
         final cached = await _getCachedCurrent();
         if (cached != null) {
-          print('💰 Using cached LTP: ₹${cached.ltp.toStringAsFixed(0)}');
           // Still fetch fresh data but return cached immediately
           _fetchCurrentLTP(); // Fire and forget
           return cached;
@@ -118,20 +109,14 @@ class Gold999Client {
         changePercent: data['change_percent']?.toDouble() ?? 0.0,
       );
 
-      print(
-        '💰 Current LTP: ₹${current.ltp.toStringAsFixed(0)} (${current.changePercent >= 0 ? '+' : ''}${current.changePercent.toStringAsFixed(2)}%)',
-      );
-
       // Cache it
       await _cacheCurrent(current);
 
       return current;
     } catch (e) {
-      print('❌ Error fetching current LTP: $e');
       // Return cached if available
       final cached = await _getCachedCurrent();
       if (cached != null) {
-        print('📦 Using cached LTP on error');
         return cached;
       }
       throw _handleError(e);
@@ -433,12 +418,18 @@ class CurrentLTP {
     final timestampStr = json['updated_at'] as String;
     DateTime timestamp;
 
-    // Check if this is from cache (has timezone info) or from API (no timezone)
-    if (timestampStr.contains('+') || timestampStr.contains('Z')) {
-      // From cache: already has timezone info, parse directly
+    // Check if this is from cache or from API (same logic as ChartPoint)
+    if (timestampStr.contains('+')) {
+      // From cache with timezone offset (e.g., "2025-11-04T13:00:00.000+05:30")
+      // Parse directly - already has local timezone info
       timestamp = DateTime.parse(timestampStr);
+    } else if (timestampStr.contains('T') && timestampStr.endsWith('Z')) {
+      // From cache, converted to UTC (e.g., "2025-11-04T07:30:00.000Z")
+      // Parse as UTC and convert to local
+      timestamp = DateTime.parse(timestampStr).toLocal();
     } else {
-      // From API: backend sends UTC without 'Z', add it and convert to local
+      // From API: backend sends UTC without 'Z' (e.g., "2025-11-04 07:30:00")
+      // Add 'Z' to mark as UTC, then convert to local
       timestamp = DateTime.parse('${timestampStr}Z').toLocal();
     }
 
@@ -494,12 +485,18 @@ class ChartPoint {
     final timestampStr = json['timestamp'] as String;
     DateTime timestamp;
 
-    // Check if this is from cache (has timezone info) or from API (no timezone)
-    if (timestampStr.contains('+') || timestampStr.endsWith('Z')) {
-      // From cache: already has timezone info, parse directly
+    // Check if this is from cache or from API
+    if (timestampStr.contains('+')) {
+      // From cache with timezone offset (e.g., "2025-11-04T13:00:00.000+05:30")
+      // Parse directly - already has local timezone info
       timestamp = DateTime.parse(timestampStr);
+    } else if (timestampStr.contains('T') && timestampStr.endsWith('Z')) {
+      // From cache, converted to UTC (e.g., "2025-11-04T07:30:00.000Z")
+      // Parse as UTC and convert to local
+      timestamp = DateTime.parse(timestampStr).toLocal();
     } else {
-      // From API: backend sends UTC without 'Z', add it and convert to local
+      // From API: backend sends UTC without 'Z' (e.g., "2025-11-04 07:30:00")
+      // Add 'Z' to mark as UTC, then convert to local
       timestamp = DateTime.parse('${timestampStr}Z').toLocal();
     }
 
