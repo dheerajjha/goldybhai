@@ -198,6 +198,7 @@ via Gold Price Tracker App
                   const SizedBox(width: 4),
                   Expanded(
                     child: RollingCurrencyNumber(
+                      key: ValueKey(widget.ltp), // Prevent unnecessary rebuilds
                       value: widget.ltp,
                       duration: const Duration(milliseconds: 600),
                       textStyle: TextStyle(

@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../config/api_config.dart';
 
 /// Simplified API client focused only on GOLD 999 WITH GST
 class Gold999Client {
@@ -10,7 +11,7 @@ class Gold999Client {
   static const String _cacheKeyChart = 'gold999_chart';
   static const String _cacheTimestamp = 'gold999_cache_time';
 
-  Gold999Client({this.baseUrl = 'https://api-goldy.sexy.dog/api'}) {
+  Gold999Client({this.baseUrl = ApiConfig.fullApiUrl}) {
     _dio = Dio(
       BaseOptions(
         baseUrl: baseUrl,
@@ -19,7 +20,7 @@ class Gold999Client {
         headers: {'Content-Type': 'application/json'},
       ),
     );
-    
+
     // Add logging interceptor
     _dio.interceptors.add(
       InterceptorsWrapper(
@@ -31,7 +32,9 @@ class Gold999Client {
           return handler.next(options);
         },
         onResponse: (response, handler) {
-          print('✅ API RESPONSE: ${response.statusCode} ${response.requestOptions.uri}');
+          print(
+            '✅ API RESPONSE: ${response.statusCode} ${response.requestOptions.uri}',
+          );
           print('📥 Response Data: ${response.data}');
           return handler.next(response);
         },
@@ -55,19 +58,24 @@ class Gold999Client {
       final response = await _dio.get('/gold999/last-hour');
       final data = response.data;
 
+      print('📊 Raw API response: ${data.toString().substring(0, 200)}...');
+      print('📊 Data array length: ${(data['data'] as List).length}');
+
       final chartData = ChartData(
         data: (data['data'] as List).map((item) {
-          return ChartPoint(
-            ltp: item['ltp'].toDouble(),
-            timestamp: DateTime.parse(item['timestamp']),
-          );
+          // Parse timestamp as UTC and convert to local for display
+          final timestampStr = item['timestamp'] as String;
+          final timestamp = DateTime.parse(
+            '${timestampStr}Z',
+          ).toLocal(); // Parse as UTC, convert to local
+          return ChartPoint(ltp: item['ltp'].toDouble(), timestamp: timestamp);
         }).toList(),
         interval: data['interval'],
         period: data['period'],
       );
 
       print('✅ Fetched ${chartData.data.length} data points for last hour');
-      
+
       // Cache it
       await _cacheChart(_cacheKeyChart, chartData);
 
@@ -103,12 +111,16 @@ class Gold999Client {
 
       final current = CurrentLTP(
         ltp: data['ltp'].toDouble(),
-        updatedAt: DateTime.parse(data['updated_at']),
+        updatedAt: DateTime.parse(
+          '${data['updated_at']}Z',
+        ).toLocal(), // Parse as UTC, convert to local
         change: data['change']?.toDouble() ?? 0.0,
         changePercent: data['change_percent']?.toDouble() ?? 0.0,
       );
 
-      print('💰 Current LTP: ₹${current.ltp.toStringAsFixed(0)} (${current.changePercent >= 0 ? '+' : ''}${current.changePercent.toStringAsFixed(2)}%)');
+      print(
+        '💰 Current LTP: ₹${current.ltp.toStringAsFixed(0)} (${current.changePercent >= 0 ? '+' : ''}${current.changePercent.toStringAsFixed(2)}%)',
+      );
 
       // Cache it
       await _cacheCurrent(current);
@@ -420,7 +432,9 @@ class CurrentLTP {
   factory CurrentLTP.fromJson(Map<String, dynamic> json) {
     return CurrentLTP(
       ltp: json['ltp'].toDouble(),
-      updatedAt: DateTime.parse(json['updated_at']),
+      updatedAt: DateTime.parse(
+        '${json['updated_at']}Z',
+      ).toLocal(), // Parse as UTC, convert to local
       change: json['change']?.toDouble() ?? 0.0,
       changePercent: json['change_percent']?.toDouble() ?? 0.0,
     );
@@ -441,11 +455,7 @@ class ChartData {
   final String interval;
   final String period;
 
-  ChartData({
-    required this.data,
-    required this.interval,
-    required this.period,
-  });
+  ChartData({required this.data, required this.interval, required this.period});
 
   factory ChartData.fromJson(Map<String, dynamic> json) {
     return ChartData(
@@ -478,10 +488,7 @@ class ChartPoint {
   }
 
   Map<String, dynamic> toJson() {
-    return {
-      'timestamp': timestamp.toIso8601String(),
-      'ltp': ltp,
-    };
+    return {'timestamp': timestamp.toIso8601String(), 'ltp': ltp};
   }
 }
 

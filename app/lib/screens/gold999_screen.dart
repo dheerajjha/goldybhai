@@ -22,9 +22,10 @@ class Gold999Screen extends StatefulWidget {
   State<Gold999Screen> createState() => _Gold999ScreenState();
 }
 
-class _Gold999ScreenState extends State<Gold999Screen> with SingleTickerProviderStateMixin {
+class _Gold999ScreenState extends State<Gold999Screen>
+    with SingleTickerProviderStateMixin {
   final Gold999Client _client = Gold999Client();
-  
+
   CurrentLTP? _currentLTP;
   ChartData? _chartData;
   List<Alert> _alerts = [];
@@ -32,22 +33,22 @@ class _Gold999ScreenState extends State<Gold999Screen> with SingleTickerProvider
   bool _loading = true;
   bool _loadingChart = false;
   String? _error;
-  
+
   String _currentInterval = 'hourly';
   int _currentDays = 1; // Fixed to 24 hours
-  
+
   // Track last loaded interval/days to detect changes
   String? _lastLoadedInterval;
   int? _lastLoadedDays;
-  
+
   Timer? _refreshTimer;
   Timer? _notificationPollTimer;
   late TabController _tabController;
-  
+
   // Local notifications
   final FlutterLocalNotificationsPlugin _localNotifications =
       FlutterLocalNotificationsPlugin();
-  
+
   // Language selection
   String _currentLocale = 'en';
 
@@ -85,24 +86,27 @@ class _Gold999ScreenState extends State<Gold999Screen> with SingleTickerProvider
     if (await Vibration.hasVibrator() ?? false) {
       Vibration.vibrate(duration: 50);
     }
-    
+
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('app_locale', locale);
     if (mounted) {
       setState(() {
         _currentLocale = locale;
       });
-      
+
       // Notify the app to change locale
-      final localeProvider = context.findAncestorWidgetOfExactType<LocaleProvider>();
+      final localeProvider = context
+          .findAncestorWidgetOfExactType<LocaleProvider>();
       if (localeProvider != null) {
         localeProvider.setLocale(Locale(locale));
       }
-      
+
       // Show snackbar
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Language changed to ${LanguageSwitcher.languages[locale]!['native']}'),
+          content: Text(
+            'Language changed to ${LanguageSwitcher.languages[locale]!['native']}',
+          ),
           duration: const Duration(seconds: 2),
           backgroundColor: Colors.green,
         ),
@@ -111,7 +115,9 @@ class _Gold999ScreenState extends State<Gold999Screen> with SingleTickerProvider
   }
 
   Future<void> _initializeLocalNotifications() async {
-    const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
+    const androidSettings = AndroidInitializationSettings(
+      '@mipmap/ic_launcher',
+    );
     const iosSettings = DarwinInitializationSettings(
       requestAlertPermission: true,
       requestBadgePermission: true,
@@ -138,7 +144,8 @@ class _Gold999ScreenState extends State<Gold999Screen> with SingleTickerProvider
     // Request permissions
     await _localNotifications
         .resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>()
+          AndroidFlutterLocalNotificationsPlugin
+        >()
         ?.requestNotificationsPermission();
   }
 
@@ -161,10 +168,10 @@ class _Gold999ScreenState extends State<Gold999Screen> with SingleTickerProvider
     try {
       final previousCount = _unreadNotificationCount;
       final count = await _client.getUnreadCount();
-      
+
       if (mounted) {
         final countIncreased = count > previousCount;
-        
+
         setState(() {
           _unreadNotificationCount = count;
         });
@@ -241,7 +248,7 @@ class _Gold999ScreenState extends State<Gold999Screen> with SingleTickerProvider
         setState(() {
           _currentLTP = current;
         });
-        
+
         // Add to chart for real-time updates
         if (_currentLTP != null && _chartData != null) {
           _addChartDataPoint(_currentLTP!.ltp, _currentLTP!.updatedAt);
@@ -260,35 +267,66 @@ class _Gold999ScreenState extends State<Gold999Screen> with SingleTickerProvider
     setState(() => _loadingChart = true);
     try {
       final chart = await _client.getLastHourData();
-      
+      print('📊 Loaded chart data: ${chart.data.length} points');
+
       if (mounted) {
         setState(() {
           _chartData = chart;
+          print(
+            '📊 Chart data set in state: ${_chartData?.data.length} points',
+          );
         });
       }
     } catch (e) {
-      print('Error loading last hour data: $e');
+      print('❌ Error loading last hour data: $e');
     } finally {
       if (mounted) {
         setState(() => _loadingChart = false);
       }
     }
   }
-  
+
   /// Add new data point to chart (for real-time updates)
+  /// Only adds a point if it's been at least 1 minute since the last point
   void _addChartDataPoint(double ltp, DateTime timestamp) {
-    if (_chartData == null) return;
-    
-    // Add new point
+    if (_chartData == null || _chartData!.data.isEmpty) return;
+
+    // Only add a new point if it's been at least 1 minute since the last point
+    final lastPoint = _chartData!.data.last;
+    final timeSinceLastPoint = timestamp.difference(lastPoint.timestamp);
+
+    if (timeSinceLastPoint.inSeconds < 60) {
+      // Update the last point's price instead of adding a new point
+      final updatedData = List<ChartPoint>.from(_chartData!.data);
+      updatedData[updatedData.length - 1] = ChartPoint(
+        ltp: ltp,
+        timestamp: lastPoint.timestamp, // Keep the same timestamp
+      );
+
+      setState(() {
+        _chartData = ChartData(
+          data: updatedData,
+          interval: _chartData!.interval,
+          period: _chartData!.period,
+        );
+      });
+      return;
+    }
+
+    print('🔄 Adding chart point: ltp=$ltp, timestamp=$timestamp');
+
+    // Add new point (it's been more than 1 minute)
     final newPoint = ChartPoint(ltp: ltp, timestamp: timestamp);
     final updatedData = List<ChartPoint>.from(_chartData!.data)..add(newPoint);
-    
-    // Keep only last hour of data
+
+    // Keep only last hour of data (using local time)
     final oneHourAgo = DateTime.now().subtract(const Duration(hours: 1));
-    final filteredData = updatedData.where((point) => 
-      point.timestamp.isAfter(oneHourAgo)
-    ).toList();
-    
+    final filteredData = updatedData
+        .where((point) => point.timestamp.isAfter(oneHourAgo))
+        .toList();
+
+    print('🔄 Chart now has ${filteredData.length} points');
+
     setState(() {
       _chartData = ChartData(
         data: filteredData,
@@ -317,10 +355,7 @@ class _Gold999ScreenState extends State<Gold999Screen> with SingleTickerProvider
 
   Future<void> _createAlert(String condition, double targetPrice) async {
     try {
-      await _client.createAlert(
-        condition: condition,
-        targetPrice: targetPrice,
-      );
+      await _client.createAlert(condition: condition, targetPrice: targetPrice);
       if (mounted) {
         Navigator.pop(context);
         await _loadAlerts();
@@ -334,10 +369,7 @@ class _Gold999ScreenState extends State<Gold999Screen> with SingleTickerProvider
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: $e'),
-            backgroundColor: Colors.red,
-          ),
+          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
         );
       }
     }
@@ -349,9 +381,9 @@ class _Gold999ScreenState extends State<Gold999Screen> with SingleTickerProvider
       await _loadAlerts();
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error: $e')));
       }
     }
   }
@@ -362,7 +394,10 @@ class _Gold999ScreenState extends State<Gold999Screen> with SingleTickerProvider
       context: context,
       builder: (context) => AlertDialog(
         title: Text(l10n?.deleteAlert ?? 'Delete Alert?'),
-        content: Text(l10n?.deleteAlertConfirm ?? 'Are you sure you want to delete this alert?'),
+        content: Text(
+          l10n?.deleteAlertConfirm ??
+              'Are you sure you want to delete this alert?',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -391,9 +426,9 @@ class _Gold999ScreenState extends State<Gold999Screen> with SingleTickerProvider
         }
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error: $e')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('Error: $e')));
         }
       }
     }
@@ -438,14 +473,11 @@ class _Gold999ScreenState extends State<Gold999Screen> with SingleTickerProvider
       body: _loading && _currentLTP == null
           ? const Center(child: CircularProgressIndicator())
           : _error != null && _currentLTP == null
-              ? _buildErrorView()
-              : TabBarView(
-                  controller: _tabController,
-                  children: [
-                    _buildPriceTab(),
-                    _buildAlertsTab(),
-                  ],
-                ),
+          ? _buildErrorView()
+          : TabBarView(
+              controller: _tabController,
+              children: [_buildPriceTab(), _buildAlertsTab()],
+            ),
       floatingActionButton: _tabController.index == 1
           ? Row(
               mainAxisAlignment: MainAxisAlignment.end,
@@ -500,7 +532,9 @@ class _Gold999ScreenState extends State<Gold999Screen> with SingleTickerProvider
                         }
                       : null,
                   icon: const Icon(Icons.add_alert),
-                  label: Text(AppLocalizations.of(context)?.createAlert ?? 'Create Alert'),
+                  label: Text(
+                    AppLocalizations.of(context)?.createAlert ?? 'Create Alert',
+                  ),
                   backgroundColor: Colors.amber,
                 ),
               ],
@@ -542,7 +576,7 @@ class _Gold999ScreenState extends State<Gold999Screen> with SingleTickerProvider
 
   Widget _buildPriceTab() {
     final l10n = AppLocalizations.of(context);
-    
+
     return RefreshIndicator(
       onRefresh: _loadData,
       child: SingleChildScrollView(
@@ -561,31 +595,40 @@ class _Gold999ScreenState extends State<Gold999Screen> with SingleTickerProvider
             const SizedBox(height: 24),
             Text(
               l10n?.last24Hours ?? 'Last 1 Hour',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
-            if (_chartData != null)
-              GoldChart(
-                chartData: _chartData!,
-                interval: _chartData!.interval,
-                period: _chartData!.period,
-              )
-            else if (_loadingChart)
-              const Center(
-                child: Padding(
-                  padding: EdgeInsets.all(32.0),
-                  child: CircularProgressIndicator(),
-                ),
-              )
-            else
-              const Center(
-                child: Padding(
-                  padding: EdgeInsets.all(32.0),
-                  child: Text('No chart data available'),
-                ),
-              ),
+            Builder(
+              builder: (context) {
+                print(
+                  '🔍 Chart render check: _chartData=${_chartData != null ? "${_chartData!.data.length} points" : "null"}, _loadingChart=$_loadingChart',
+                );
+
+                if (_chartData != null) {
+                  return GoldChart(
+                    chartData: _chartData!,
+                    interval: _chartData!.interval,
+                    period: _chartData!.period,
+                  );
+                } else if (_loadingChart) {
+                  return const Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(32.0),
+                      child: CircularProgressIndicator(),
+                    ),
+                  );
+                } else {
+                  return const Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(32.0),
+                      child: Text('No chart data available'),
+                    ),
+                  );
+                }
+              },
+            ),
           ],
         ),
       ),
@@ -598,8 +641,10 @@ class _Gold999ScreenState extends State<Gold999Screen> with SingleTickerProvider
       child: _alerts.isEmpty
           ? EmptyState(
               icon: Icons.notifications_none_outlined,
-              title: AppLocalizations.of(context)?.noAlertsYet ?? 'No alerts yet',
-              message: AppLocalizations.of(context)?.createFirstAlert ?? 
+              title:
+                  AppLocalizations.of(context)?.noAlertsYet ?? 'No alerts yet',
+              message:
+                  AppLocalizations.of(context)?.createFirstAlert ??
                   'Create your first price alert to get notified when gold price reaches your target.',
             )
           : ListView.builder(
@@ -617,4 +662,3 @@ class _Gold999ScreenState extends State<Gold999Screen> with SingleTickerProvider
     );
   }
 }
-

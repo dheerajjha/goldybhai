@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import '../config/api_config.dart';
 
 /// FCM Service for handling push notifications
 class FCMService {
@@ -14,7 +15,7 @@ class FCMService {
   final FlutterLocalNotificationsPlugin _localNotifications =
       FlutterLocalNotificationsPlugin();
   String? _fcmToken;
-  final String _baseUrl = 'https://api-goldy.sexy.dog';
+  final String _baseUrl = ApiConfig.baseUrl;
 
   /// Initialize FCM and request permissions
   Future<void> initialize() async {

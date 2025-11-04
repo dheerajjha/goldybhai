@@ -66,7 +66,11 @@ async function getCurrentLTP(req, res) {
  */
 async function getLastHourData(req, res) {
   try {
-    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+    // SQLite datetime format: 'YYYY-MM-DD HH:MM:SS'
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000)
+      .toISOString()
+      .replace('T', ' ')
+      .substring(0, 19);
     
     const query = `
       SELECT 
