@@ -57,26 +57,66 @@ class Gold999Client {
       final response = await _dio.get('/gold999/last-hour');
       final data = response.data;
 
+      // Validate response structure
+      if (data == null || !data.containsKey('data')) {
+        throw Exception('Invalid response structure: missing data field');
+      }
+
+      final dataList = data['data'];
+      if (dataList is! List) {
+        throw Exception('Invalid response: data is not a List (got ${dataList.runtimeType})');
+      }
+
+      print('📊 Raw API response: $data');
+      print('📊 Data array length: ${dataList.length}');
+
       final chartData = ChartData(
-        data: (data['data'] as List).map((item) {
-          // Backend now sends IST timestamps - parse as local time
-          final timestampStr = item['timestamp'] as String;
-          // Convert "YYYY-MM-DD HH:MM:SS" to "YYYY-MM-DDTHH:MM:SS" for parsing
-          final timestamp = DateTime.parse(timestampStr.replaceAll(' ', 'T'));
-          return ChartPoint(ltp: item['ltp'].toDouble(), timestamp: timestamp);
+        data: dataList.map((item) {
+          try {
+            // Validate item structure
+            if (item is! Map) {
+              throw Exception('Invalid data item: not a Map (got ${item.runtimeType})');
+            }
+            
+            final itemMap = item as Map<String, dynamic>;
+            
+            // Validate required fields
+            if (!itemMap.containsKey('ltp') || !itemMap.containsKey('timestamp')) {
+              throw Exception('Invalid data item: missing ltp or timestamp');
+            }
+
+            // Backend now sends IST timestamps - parse as local time
+            final timestampStr = itemMap['timestamp'] as String;
+            // Convert "YYYY-MM-DD HH:MM:SS" to "YYYY-MM-DDTHH:MM:SS" for parsing
+            final timestamp = DateTime.parse(timestampStr.replaceAll(' ', 'T'));
+            
+            // Handle ltp as either int or double
+            final ltpValue = itemMap['ltp'];
+            final ltp = ltpValue is int ? ltpValue.toDouble() : (ltpValue as num).toDouble();
+            
+            return ChartPoint(ltp: ltp, timestamp: timestamp);
+          } catch (e) {
+            print('❌ Error parsing chart point: $e');
+            print('❌ Item: $item');
+            rethrow;
+          }
         }).toList(),
-        interval: data['interval'],
-        period: data['period'],
+        interval: data['interval'] as String? ?? '1m',
+        period: data['period'] as String? ?? '1h',
       );
+
+      print('✅ Fetched ${chartData.data.length} data points for last hour');
 
       // Cache it
       await _cacheChart(_cacheKeyChart, chartData);
 
       return chartData;
     } catch (e) {
+      print('❌ Error in getLastHourData: $e');
       // Try cache on error
       final cached = await _getCachedChart(_cacheKeyChart);
       if (cached != null) {
+        print('📦 Using cached chart data');
         return cached;
       }
       rethrow;
@@ -178,6 +218,12 @@ class Gold999Client {
         '/gold999/alerts',
         queryParameters: {'userId': userId},
       );
+      
+      // Validate response structure
+      if (!response.data.containsKey('data') || response.data['data'] is! List) {
+        throw Exception('Invalid alerts response: data field missing or not a List');
+      }
+      
       final data = response.data['data'] as List;
       return data.map((json) => Alert.fromJson(json)).toList();
     } catch (e) {
@@ -408,27 +454,53 @@ class CurrentLTP {
   });
 
   factory CurrentLTP.fromJson(Map<String, dynamic> json) {
-    final timestampStr = json['updated_at'] as String;
-    DateTime timestamp;
+    try {
+      // Validate required fields
+      if (!json.containsKey('ltp') || !json.containsKey('updated_at')) {
+        throw Exception('Missing required fields: ltp or updated_at');
+      }
 
-    // Backend now sends IST timestamps in format: "YYYY-MM-DD HH:MM:SS"
-    // We parse this as local time (IST) - no timezone conversion needed
-    if (timestampStr.contains('T')) {
-      // From cache: ISO format (e.g., "2025-11-04T13:00:00.000")
-      // Parse as local time (IST), strip any timezone markers
-      timestamp = DateTime.parse(timestampStr.replaceAll('Z', '').split('+')[0]);
-    } else {
-      // From API: SQLite format (e.g., "2025-11-04 13:00:00")
-      // Convert to ISO format and parse as local time (IST)
-      timestamp = DateTime.parse(timestampStr.replaceAll(' ', 'T'));
+      final timestampStr = json['updated_at'] as String;
+      DateTime timestamp;
+
+      // Backend now sends IST timestamps in format: "YYYY-MM-DD HH:MM:SS"
+      // We parse this as local time (IST) - no timezone conversion needed
+      if (timestampStr.contains('T')) {
+        // From cache: ISO format (e.g., "2025-11-04T13:00:00.000")
+        // Parse as local time (IST), strip any timezone markers
+        timestamp = DateTime.parse(timestampStr.replaceAll('Z', '').split('+')[0]);
+      } else {
+        // From API: SQLite format (e.g., "2025-11-04 13:00:00")
+        // Convert to ISO format and parse as local time (IST)
+        timestamp = DateTime.parse(timestampStr.replaceAll(' ', 'T'));
+      }
+
+      // Handle ltp as either int or double
+      final ltpValue = json['ltp'];
+      final ltp = ltpValue is int ? ltpValue.toDouble() : (ltpValue as num).toDouble();
+
+      // Handle change values
+      final changeValue = json['change'];
+      final change = changeValue == null 
+          ? 0.0 
+          : (changeValue is int ? changeValue.toDouble() : (changeValue as num).toDouble());
+
+      final changePercentValue = json['change_percent'];
+      final changePercent = changePercentValue == null 
+          ? 0.0 
+          : (changePercentValue is int ? changePercentValue.toDouble() : (changePercentValue as num).toDouble());
+
+      return CurrentLTP(
+        ltp: ltp,
+        updatedAt: timestamp,
+        change: change,
+        changePercent: changePercent,
+      );
+    } catch (e) {
+      print('❌ Error parsing CurrentLTP: $e');
+      print('❌ JSON: $json');
+      rethrow;
     }
-
-    return CurrentLTP(
-      ltp: json['ltp'].toDouble(),
-      updatedAt: timestamp,
-      change: json['change']?.toDouble() ?? 0.0,
-      changePercent: json['change_percent']?.toDouble() ?? 0.0,
-    );
   }
 
   Map<String, dynamic> toJson() {
@@ -449,11 +521,22 @@ class ChartData {
   ChartData({required this.data, required this.interval, required this.period});
 
   factory ChartData.fromJson(Map<String, dynamic> json) {
-    return ChartData(
-      data: (json['data'] as List).map((p) => ChartPoint.fromJson(p)).toList(),
-      interval: json['interval'] as String,
-      period: json['period'] as String,
-    );
+    try {
+      // Validate data field
+      if (!json.containsKey('data') || json['data'] is! List) {
+        throw Exception('Invalid ChartData: data field missing or not a List');
+      }
+
+      return ChartData(
+        data: (json['data'] as List).map((p) => ChartPoint.fromJson(p)).toList(),
+        interval: json['interval'] as String? ?? '1m',
+        period: json['period'] as String? ?? '1h',
+      );
+    } catch (e) {
+      print('❌ Error parsing ChartData: $e');
+      print('❌ JSON: $json');
+      rethrow;
+    }
   }
 
   Map<String, dynamic> toJson() {
@@ -472,22 +555,37 @@ class ChartPoint {
   ChartPoint({required this.timestamp, required this.ltp});
 
   factory ChartPoint.fromJson(Map<String, dynamic> json) {
-    final timestampStr = json['timestamp'] as String;
-    DateTime timestamp;
+    try {
+      // Validate required fields
+      if (!json.containsKey('ltp') || !json.containsKey('timestamp')) {
+        throw Exception('Missing required fields: ltp or timestamp');
+      }
 
-    // Backend now sends IST timestamps in format: "YYYY-MM-DD HH:MM:SS"
-    // We parse this as local time (IST) - no timezone conversion needed
-    if (timestampStr.contains('T')) {
-      // From cache: ISO format (e.g., "2025-11-04T13:00:00.000")
-      // Parse as local time (IST), strip any timezone markers
-      timestamp = DateTime.parse(timestampStr.replaceAll('Z', '').split('+')[0]);
-    } else {
-      // From API: SQLite format (e.g., "2025-11-04 13:00:00")
-      // Convert to ISO format and parse as local time (IST)
-      timestamp = DateTime.parse(timestampStr.replaceAll(' ', 'T'));
+      final timestampStr = json['timestamp'] as String;
+      DateTime timestamp;
+
+      // Backend now sends IST timestamps in format: "YYYY-MM-DD HH:MM:SS"
+      // We parse this as local time (IST) - no timezone conversion needed
+      if (timestampStr.contains('T')) {
+        // From cache: ISO format (e.g., "2025-11-04T13:00:00.000")
+        // Parse as local time (IST), strip any timezone markers
+        timestamp = DateTime.parse(timestampStr.replaceAll('Z', '').split('+')[0]);
+      } else {
+        // From API: SQLite format (e.g., "2025-11-04 13:00:00")
+        // Convert to ISO format and parse as local time (IST)
+        timestamp = DateTime.parse(timestampStr.replaceAll(' ', 'T'));
+      }
+
+      // Handle ltp as either int or double
+      final ltpValue = json['ltp'];
+      final ltp = ltpValue is int ? ltpValue.toDouble() : (ltpValue as num).toDouble();
+
+      return ChartPoint(timestamp: timestamp, ltp: ltp);
+    } catch (e) {
+      print('❌ Error parsing ChartPoint: $e');
+      print('❌ JSON: $json');
+      rethrow;
     }
-
-    return ChartPoint(timestamp: timestamp, ltp: json['ltp'].toDouble());
   }
 
   Map<String, dynamic> toJson() {
@@ -519,14 +617,20 @@ class RateDetail {
   });
 
   factory RateDetail.fromJson(Map<String, dynamic> json) {
+    // Helper to safely convert to double
+    double toDouble(dynamic value) {
+      if (value == null) return 0.0;
+      return value is int ? value.toDouble() : (value as num).toDouble();
+    }
+
     return RateDetail(
       id: json['id'] as int,
       commodityId: json['commodity_id'] as int,
-      ltp: json['ltp'].toDouble(),
-      buyPrice: json['buy_price']?.toDouble(),
-      sellPrice: json['sell_price']?.toDouble(),
-      high: json['high']?.toDouble(),
-      low: json['low']?.toDouble(),
+      ltp: toDouble(json['ltp']),
+      buyPrice: json['buy_price'] != null ? toDouble(json['buy_price']) : null,
+      sellPrice: json['sell_price'] != null ? toDouble(json['sell_price']) : null,
+      high: json['high'] != null ? toDouble(json['high']) : null,
+      low: json['low'] != null ? toDouble(json['low']) : null,
       updatedAt: DateTime.parse(json['updated_at']),
       source: json['source'] as String?,
     );
@@ -559,12 +663,18 @@ class Alert {
   });
 
   factory Alert.fromJson(Map<String, dynamic> json) {
+    // Helper to safely convert to double
+    double toDouble(dynamic value) {
+      if (value == null) return 0.0;
+      return value is int ? value.toDouble() : (value as num).toDouble();
+    }
+
     return Alert(
       id: json['id'] as int,
       userId: json['user_id'] as int,
       commodityId: json['commodity_id'] as int,
       condition: json['condition'] as String,
-      targetPrice: json['target_price'].toDouble(),
+      targetPrice: toDouble(json['target_price']),
       active: json['active'] == 1 || json['active'] == true,
       createdAt: DateTime.parse(json['created_at']),
       triggeredAt: json['triggered_at'] != null
@@ -583,12 +693,23 @@ class NotificationList {
   NotificationList({required this.notifications, required this.unreadCount});
 
   factory NotificationList.fromJson(Map<String, dynamic> json) {
-    return NotificationList(
-      notifications: (json['data'] as List)
-          .map((n) => AppNotification.fromJson(n))
-          .toList(),
-      unreadCount: json['unread_count'] as int? ?? 0,
-    );
+    try {
+      // Validate data field
+      if (!json.containsKey('data') || json['data'] is! List) {
+        throw Exception('Invalid NotificationList: data field missing or not a List');
+      }
+
+      return NotificationList(
+        notifications: (json['data'] as List)
+            .map((n) => AppNotification.fromJson(n))
+            .toList(),
+        unreadCount: json['unread_count'] as int? ?? 0,
+      );
+    } catch (e) {
+      print('❌ Error parsing NotificationList: $e');
+      print('❌ JSON: $json');
+      rethrow;
+    }
   }
 }
 
@@ -616,6 +737,12 @@ class AppNotification {
   });
 
   factory AppNotification.fromJson(Map<String, dynamic> json) {
+    // Helper to safely convert to double
+    double? toDoubleOrNull(dynamic value) {
+      if (value == null) return null;
+      return value is int ? value.toDouble() : (value as num).toDouble();
+    }
+
     return AppNotification(
       id: json['id'] as int,
       alertId: json['alert_id'] as int,
@@ -623,7 +750,7 @@ class AppNotification {
       sentAt: DateTime.parse(json['sent_at']),
       delivered: json['delivered'] == 1 || json['delivered'] == true,
       read: json['read'] == 1 || json['read'] == true,
-      targetPrice: json['target_price']?.toDouble(),
+      targetPrice: toDoubleOrNull(json['target_price']),
       condition: json['condition'] as String?,
       triggeredAt: json['triggered_at'] != null
           ? DateTime.parse(json['triggered_at'])
