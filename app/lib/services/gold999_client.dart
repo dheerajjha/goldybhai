@@ -100,14 +100,8 @@ class Gold999Client {
       final response = await _dio.get('/gold999/current');
       final data = response.data;
 
-      final current = CurrentLTP(
-        ltp: data['ltp'].toDouble(),
-        updatedAt: DateTime.parse(
-          '${data['updated_at']}Z',
-        ).toLocal(), // Parse as UTC, convert to local
-        change: data['change']?.toDouble() ?? 0.0,
-        changePercent: data['change_percent']?.toDouble() ?? 0.0,
-      );
+      // Use fromJson to ensure consistent timestamp parsing
+      final current = CurrentLTP.fromJson(data);
 
       // Cache it
       await _cacheCurrent(current);
@@ -418,7 +412,7 @@ class CurrentLTP {
     final timestampStr = json['updated_at'] as String;
     DateTime timestamp;
 
-    // Check if this is from cache or from API (same logic as ChartPoint)
+    // Smart 4-way timestamp parsing to handle API and cache formats
     if (timestampStr.contains('+')) {
       // From cache with timezone offset (e.g., "2025-11-04T13:00:00.000+05:30")
       // Parse directly - already has local timezone info
@@ -427,6 +421,10 @@ class CurrentLTP {
       // From cache, converted to UTC (e.g., "2025-11-04T07:30:00.000Z")
       // Parse as UTC and convert to local
       timestamp = DateTime.parse(timestampStr).toLocal();
+    } else if (timestampStr.contains('T')) {
+      // From cache but timezone was stripped (e.g., "2025-11-04T14:25:30.000")
+      // This is ALREADY in local time, parse directly WITHOUT conversion
+      timestamp = DateTime.parse(timestampStr);
     } else {
       // From API: backend sends UTC without 'Z' (e.g., "2025-11-04 07:30:00")
       // Add 'Z' to mark as UTC, then convert to local
@@ -485,7 +483,7 @@ class ChartPoint {
     final timestampStr = json['timestamp'] as String;
     DateTime timestamp;
 
-    // Check if this is from cache or from API
+    // Smart 4-way timestamp parsing to handle API and cache formats
     if (timestampStr.contains('+')) {
       // From cache with timezone offset (e.g., "2025-11-04T13:00:00.000+05:30")
       // Parse directly - already has local timezone info
@@ -494,6 +492,10 @@ class ChartPoint {
       // From cache, converted to UTC (e.g., "2025-11-04T07:30:00.000Z")
       // Parse as UTC and convert to local
       timestamp = DateTime.parse(timestampStr).toLocal();
+    } else if (timestampStr.contains('T')) {
+      // From cache but timezone was stripped (e.g., "2025-11-04T14:25:30.000")
+      // This is ALREADY in local time, parse directly WITHOUT conversion
+      timestamp = DateTime.parse(timestampStr);
     } else {
       // From API: backend sends UTC without 'Z' (e.g., "2025-11-04 07:30:00")
       // Add 'Z' to mark as UTC, then convert to local

@@ -267,18 +267,14 @@ class _Gold999ScreenState extends State<Gold999Screen>
     setState(() => _loadingChart = true);
     try {
       final chart = await _client.getLastHourData();
-      print('📊 Loaded chart data: ${chart.data.length} points');
 
       if (mounted) {
         setState(() {
           _chartData = chart;
-          print(
-            '📊 Chart data set in state: ${_chartData?.data.length} points',
-          );
         });
       }
     } catch (e) {
-      print('❌ Error loading last hour data: $e');
+      // Handle error silently
     } finally {
       if (mounted) {
         setState(() => _loadingChart = false);
@@ -290,8 +286,6 @@ class _Gold999ScreenState extends State<Gold999Screen>
   /// Only adds a point if it's been at least 1 minute since the last point
   void _addChartDataPoint(double ltp, DateTime timestamp) {
     if (_chartData == null || _chartData!.data.isEmpty) return;
-
-    print('🔄 Adding chart point: ltp=$ltp, timestamp=$timestamp, isUtc=${timestamp.isUtc}');
 
     // Only add a new point if it's been at least 1 minute since the last point
     final lastPoint = _chartData!.data.last;
@@ -315,8 +309,6 @@ class _Gold999ScreenState extends State<Gold999Screen>
       return;
     }
 
-    print('🔄 Adding NEW point (>1 min since last)');
-
     // Add new point (it's been more than 1 minute)
     final newPoint = ChartPoint(ltp: ltp, timestamp: timestamp);
     final updatedData = List<ChartPoint>.from(_chartData!.data)..add(newPoint);
@@ -326,12 +318,6 @@ class _Gold999ScreenState extends State<Gold999Screen>
     final filteredData = updatedData
         .where((point) => point.timestamp.isAfter(oneHourAgo))
         .toList();
-
-    print('🔄 Chart now has ${filteredData.length} points');
-    if (filteredData.isNotEmpty) {
-      print('🔄 First point: ${filteredData.first.timestamp} (isUtc=${filteredData.first.timestamp.isUtc})');
-      print('🔄 Last point: ${filteredData.last.timestamp} (isUtc=${filteredData.last.timestamp.isUtc})');
-    }
 
     setState(() {
       _chartData = ChartData(
@@ -608,10 +594,6 @@ class _Gold999ScreenState extends State<Gold999Screen>
             const SizedBox(height: 16),
             Builder(
               builder: (context) {
-                print(
-                  '🔍 Chart render check: _chartData=${_chartData != null ? "${_chartData!.data.length} points" : "null"}, _loadingChart=$_loadingChart',
-                );
-
                 if (_chartData != null) {
                   return GoldChart(
                     chartData: _chartData!,

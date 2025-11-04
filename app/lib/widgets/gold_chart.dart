@@ -19,10 +19,7 @@ class GoldChart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    print('📈 GoldChart build called with ${chartData.data.length} points');
-
     if (chartData.data.isEmpty) {
-      print('📈 Chart data is empty, showing empty state');
       return const Center(
         child: Padding(
           padding: EdgeInsets.all(32.0),
@@ -30,8 +27,6 @@ class GoldChart extends StatelessWidget {
         ),
       );
     }
-
-    print('📈 Rendering chart with ${chartData.data.length} points');
 
     final minPrice = chartData.data
         .map((p) => p.ltp)
