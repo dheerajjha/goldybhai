@@ -59,11 +59,10 @@ class Gold999Client {
 
       final chartData = ChartData(
         data: (data['data'] as List).map((item) {
-          // Parse timestamp as UTC and convert to local for display
+          // Backend now sends IST timestamps - parse as local time
           final timestampStr = item['timestamp'] as String;
-          final timestamp = DateTime.parse(
-            '${timestampStr}Z',
-          ).toLocal(); // Parse as UTC, convert to local
+          // Convert "YYYY-MM-DD HH:MM:SS" to "YYYY-MM-DDTHH:MM:SS" for parsing
+          final timestamp = DateTime.parse(timestampStr.replaceAll(' ', 'T'));
           return ChartPoint(ltp: item['ltp'].toDouble(), timestamp: timestamp);
         }).toList(),
         interval: data['interval'],
@@ -412,23 +411,16 @@ class CurrentLTP {
     final timestampStr = json['updated_at'] as String;
     DateTime timestamp;
 
-    // Smart 4-way timestamp parsing to handle API and cache formats
-    if (timestampStr.contains('+')) {
-      // From cache with timezone offset (e.g., "2025-11-04T13:00:00.000+05:30")
-      // Parse directly - already has local timezone info
-      timestamp = DateTime.parse(timestampStr);
-    } else if (timestampStr.contains('T') && timestampStr.endsWith('Z')) {
-      // From cache, converted to UTC (e.g., "2025-11-04T07:30:00.000Z")
-      // Parse as UTC and convert to local
-      timestamp = DateTime.parse(timestampStr).toLocal();
-    } else if (timestampStr.contains('T')) {
-      // From cache but timezone was stripped (e.g., "2025-11-04T14:25:30.000")
-      // This is ALREADY in local time, parse directly WITHOUT conversion
-      timestamp = DateTime.parse(timestampStr);
+    // Backend now sends IST timestamps in format: "YYYY-MM-DD HH:MM:SS"
+    // We parse this as local time (IST) - no timezone conversion needed
+    if (timestampStr.contains('T')) {
+      // From cache: ISO format (e.g., "2025-11-04T13:00:00.000")
+      // Parse as local time (IST), strip any timezone markers
+      timestamp = DateTime.parse(timestampStr.replaceAll('Z', '').split('+')[0]);
     } else {
-      // From API: backend sends UTC without 'Z' (e.g., "2025-11-04 07:30:00")
-      // Add 'Z' to mark as UTC, then convert to local
-      timestamp = DateTime.parse('${timestampStr}Z').toLocal();
+      // From API: SQLite format (e.g., "2025-11-04 13:00:00")
+      // Convert to ISO format and parse as local time (IST)
+      timestamp = DateTime.parse(timestampStr.replaceAll(' ', 'T'));
     }
 
     return CurrentLTP(
@@ -483,23 +475,16 @@ class ChartPoint {
     final timestampStr = json['timestamp'] as String;
     DateTime timestamp;
 
-    // Smart 4-way timestamp parsing to handle API and cache formats
-    if (timestampStr.contains('+')) {
-      // From cache with timezone offset (e.g., "2025-11-04T13:00:00.000+05:30")
-      // Parse directly - already has local timezone info
-      timestamp = DateTime.parse(timestampStr);
-    } else if (timestampStr.contains('T') && timestampStr.endsWith('Z')) {
-      // From cache, converted to UTC (e.g., "2025-11-04T07:30:00.000Z")
-      // Parse as UTC and convert to local
-      timestamp = DateTime.parse(timestampStr).toLocal();
-    } else if (timestampStr.contains('T')) {
-      // From cache but timezone was stripped (e.g., "2025-11-04T14:25:30.000")
-      // This is ALREADY in local time, parse directly WITHOUT conversion
-      timestamp = DateTime.parse(timestampStr);
+    // Backend now sends IST timestamps in format: "YYYY-MM-DD HH:MM:SS"
+    // We parse this as local time (IST) - no timezone conversion needed
+    if (timestampStr.contains('T')) {
+      // From cache: ISO format (e.g., "2025-11-04T13:00:00.000")
+      // Parse as local time (IST), strip any timezone markers
+      timestamp = DateTime.parse(timestampStr.replaceAll('Z', '').split('+')[0]);
     } else {
-      // From API: backend sends UTC without 'Z' (e.g., "2025-11-04 07:30:00")
-      // Add 'Z' to mark as UTC, then convert to local
-      timestamp = DateTime.parse('${timestampStr}Z').toLocal();
+      // From API: SQLite format (e.g., "2025-11-04 13:00:00")
+      // Convert to ISO format and parse as local time (IST)
+      timestamp = DateTime.parse(timestampStr.replaceAll(' ', 'T'));
     }
 
     return ChartPoint(timestamp: timestamp, ltp: json['ltp'].toDouble());

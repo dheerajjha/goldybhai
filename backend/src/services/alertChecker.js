@@ -3,6 +3,7 @@ const { all, run, get } = require('../config/database');
 const { GOLD999_COMMODITY_ID } = require('../controllers/gold999Controller');
 const fcmService = require('./fcmService');
 const { getTokensForNotification, removeInvalidTokens } = require('../controllers/fcmController');
+const { formatForSQLite } = require('../utils/timezone');
 
 let cronJob = null;
 let cachedRate = null;
@@ -59,19 +60,20 @@ async function createNotification(alert, currentPrice) {
   try {
     const conditionText = alert.condition === '<' ? 'dropped below' : 'rose above';
     const message = `${alert.commodity_name} ${conditionText} ₹${alert.target_price.toLocaleString()} (Current: ₹${currentPrice.toLocaleString()})`;
+    const istTimestamp = formatForSQLite();
 
     await run(
       `INSERT INTO notifications (alert_id, message, sent_at, delivered, read)
-       VALUES (?, ?, CURRENT_TIMESTAMP, 1, 0)`,
-      [alert.id, message]
+       VALUES (?, ?, ?, 1, 0)`,
+      [alert.id, message, istTimestamp]
     );
 
     console.log(`🔔 Notification created: ${message}`);
 
     // Mark alert as triggered
     await run(
-      `UPDATE alerts SET triggered_at = CURRENT_TIMESTAMP WHERE id = ?`,
-      [alert.id]
+      `UPDATE alerts SET triggered_at = ? WHERE id = ?`,
+      [istTimestamp, alert.id]
     );
 
     return { message, alertId: alert.id };

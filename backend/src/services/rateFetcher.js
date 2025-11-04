@@ -1,6 +1,7 @@
 const cron = require('node-cron');
 const axios = require('axios');
 const { run, all } = require('../config/database');
+const { formatForSQLite } = require('../utils/timezone');
 
 let cronJob = null;
 
@@ -150,10 +151,12 @@ async function generateMockRates() {
  */
 async function saveRates(rates) {
   try {
+    const istTimestamp = formatForSQLite(); // Get current IST timestamp
+    
     for (const rate of rates) {
       await run(
         `INSERT INTO rates (commodity_id, ltp, buy_price, sell_price, high, low, updated_at, source)
-         VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?)`,
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           rate.commodity_id,
           rate.ltp,
@@ -161,6 +164,7 @@ async function saveRates(rates) {
           rate.sell_price,
           rate.high,
           rate.low,
+          istTimestamp,
           'arihantspot.com'
         ]
       );

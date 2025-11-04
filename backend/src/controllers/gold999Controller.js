@@ -1,4 +1,5 @@
 const { all, get, run } = require('../config/database');
+const { getISTTimeAgo, formatForAPI } = require('../utils/timezone');
 
 // GOLD 999 WITH GST commodity ID (hardcoded for focus)
 const GOLD999_COMMODITY_ID = 2;
@@ -47,7 +48,7 @@ async function getCurrentLTP(req, res) {
     res.json({
       success: true,
       ltp: currentRate.ltp,
-      updated_at: currentRate.updated_at,
+      updated_at: formatForAPI(currentRate.updated_at), // Return IST timestamp
       change: parseFloat(change.toFixed(2)),
       change_percent: parseFloat(changePercent.toFixed(2))
     });
@@ -63,14 +64,12 @@ async function getCurrentLTP(req, res) {
 /**
  * Get chart data for last 1 hour with 1-minute intervals
  * Returns raw data points for accurate 1-hour chart
+ * All timestamps are in IST
  */
 async function getLastHourData(req, res) {
   try {
-    // SQLite datetime format: 'YYYY-MM-DD HH:MM:SS'
-    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000)
-      .toISOString()
-      .replace('T', ' ')
-      .substring(0, 19);
+    // Get IST timestamp for 1 hour ago
+    const oneHourAgo = getISTTimeAgo(1);
     
     const query = `
       SELECT 
@@ -90,7 +89,7 @@ async function getLastHourData(req, res) {
       success: true,
       data: data.map(row => ({
         ltp: row.ltp,
-        timestamp: row.updated_at,
+        timestamp: formatForAPI(row.updated_at), // Return IST timestamp
         time: row.time_bucket
       })),
       interval: '1m',
