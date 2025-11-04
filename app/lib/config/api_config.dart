@@ -6,7 +6,8 @@ class ApiConfig {
   // Base URL for the backend API
   // For production, use: 'https://api-goldy.sexy.dog'
   // For local development, use: 'http://192.168.1.3:3000' or 'http://localhost:3000'
-  static const String baseUrl = 'http://192.168.1.3:3000';
+  // static const String baseUrl = 'http://192.168.1.3:3000';
+  static const String baseUrl = 'https://api-goldy.sexy.dog';
 
   // API endpoints
   static const String apiPath = '/api';
