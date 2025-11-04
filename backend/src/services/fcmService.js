@@ -72,10 +72,20 @@ async function sendNotification(token, title, body, data = {}) {
       },
       // iOS-specific options
       apns: {
+        headers: {
+          'apns-priority': '10', // High priority for immediate delivery
+          'apns-push-type': 'alert',
+        },
         payload: {
           aps: {
+            alert: {
+              title: title,
+              body: body,
+            },
             sound: 'default',
             badge: 1,
+            'content-available': 1, // Enable background notification delivery
+            'mutable-content': 1, // Allow notification modification
           },
         },
       },
@@ -134,10 +144,20 @@ async function sendMulticastNotification(tokens, title, body, data = {}) {
         },
       },
       apns: {
+        headers: {
+          'apns-priority': '10', // High priority for immediate delivery
+          'apns-push-type': 'alert',
+        },
         payload: {
           aps: {
+            alert: {
+              title: title,
+              body: body,
+            },
             sound: 'default',
             badge: 1,
+            'content-available': 1, // Enable background notification delivery
+            'mutable-content': 1, // Allow notification modification
           },
         },
       },

@@ -9,8 +9,16 @@ import 'l10n/app_localizations.dart';
 /// Background message handler - must be top-level function
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  // Handle background message
-  print('📨 Background message: ${message.messageId}');
+  // Initialize Firebase for background handler
+  await Firebase.initializeApp();
+  
+  print('📨 Background message received: ${message.messageId}');
+  print('📨 Title: ${message.notification?.title}');
+  print('📨 Body: ${message.notification?.body}');
+  print('📨 Data: ${message.data}');
+  
+  // Note: iOS will automatically show the notification
+  // Android needs local notification plugin if you want custom handling
 }
 
 void main() async {
