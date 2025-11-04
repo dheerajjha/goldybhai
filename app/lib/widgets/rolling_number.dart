@@ -199,7 +199,7 @@ class _RollingDigit extends StatelessWidget {
 }
 
 /// Simplified rolling number for currency display
-class RollingCurrencyNumber extends StatelessWidget {
+class RollingCurrencyNumber extends StatefulWidget {
   final double value;
   final TextStyle? textStyle;
   final Duration duration;
@@ -212,14 +212,36 @@ class RollingCurrencyNumber extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    // Format number with commas (Indian numbering system)
-    final formattedNumber = _formatIndianNumber(value.toInt());
+  State<RollingCurrencyNumber> createState() => _RollingCurrencyNumberState();
+}
 
+class _RollingCurrencyNumberState extends State<RollingCurrencyNumber> {
+  late String _formattedNumber;
+
+  @override
+  void initState() {
+    super.initState();
+    _formattedNumber = _formatIndianNumber(widget.value.toInt());
+  }
+
+  @override
+  void didUpdateWidget(RollingCurrencyNumber oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Only update if the formatted number actually changes
+    final newFormattedNumber = _formatIndianNumber(widget.value.toInt());
+    if (_formattedNumber != newFormattedNumber) {
+      setState(() {
+        _formattedNumber = newFormattedNumber;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return RollingNumber(
-      number: formattedNumber,
-      textStyle: textStyle,
-      duration: duration,
+      number: _formattedNumber,
+      textStyle: widget.textStyle,
+      duration: widget.duration,
     );
   }
 
