@@ -1,11 +1,12 @@
 const { all, get, run } = require('../config/database');
-const { GOLD999_COMMODITY_ID } = require('../controllers/gold999Controller');
+const { getGold999CommodityId } = require('../controllers/gold999Controller');
 
 /**
  * Get all notifications for GOLD 999 alerts
  */
 async function getNotifications(req, res) {
   try {
+    const commodityId = await getGold999CommodityId();
     const { userId = 1, limit = 50, unreadOnly = false } = req.query;
     const limitInt = Math.min(parseInt(limit) || 50, 200);
 
@@ -25,7 +26,7 @@ async function getNotifications(req, res) {
       WHERE a.commodity_id = ? AND a.user_id = ?
     `;
 
-    const params = [GOLD999_COMMODITY_ID, userId];
+    const params = [commodityId, userId];
 
     if (unreadOnly === 'true') {
       query += ' AND n.read = 0';
@@ -42,7 +43,7 @@ async function getNotifications(req, res) {
        FROM notifications n
        JOIN alerts a ON n.alert_id = a.id
        WHERE a.commodity_id = ? AND a.user_id = ? AND n.read = 0`,
-      [GOLD999_COMMODITY_ID, userId]
+      [commodityId, userId]
     );
 
     res.json({
@@ -64,6 +65,7 @@ async function getNotifications(req, res) {
  */
 async function getUnreadCount(req, res) {
   try {
+    const commodityId = await getGold999CommodityId();
     const { userId = 1 } = req.query;
 
     const result = await get(
@@ -71,7 +73,7 @@ async function getUnreadCount(req, res) {
        FROM notifications n
        JOIN alerts a ON n.alert_id = a.id
        WHERE a.commodity_id = ? AND a.user_id = ? AND n.read = 0`,
-      [GOLD999_COMMODITY_ID, userId]
+      [commodityId, userId]
     );
 
     res.json({
@@ -92,6 +94,7 @@ async function getUnreadCount(req, res) {
  */
 async function markAsRead(req, res) {
   try {
+    const commodityId = await getGold999CommodityId();
     const { id } = req.params;
     const { userId = 1 } = req.query;
 
@@ -101,7 +104,7 @@ async function markAsRead(req, res) {
        FROM notifications n
        JOIN alerts a ON n.alert_id = a.id
        WHERE n.id = ? AND a.commodity_id = ? AND a.user_id = ?`,
-      [id, GOLD999_COMMODITY_ID, userId]
+      [id, commodityId, userId]
     );
 
     if (!notification) {
@@ -134,6 +137,7 @@ async function markAsRead(req, res) {
  */
 async function markAllAsRead(req, res) {
   try {
+    const commodityId = await getGold999CommodityId();
     const { userId = 1 } = req.query;
 
     await run(
@@ -143,7 +147,7 @@ async function markAllAsRead(req, res) {
          SELECT id FROM alerts
          WHERE commodity_id = ? AND user_id = ?
        ) AND read = 0`,
-      [GOLD999_COMMODITY_ID, userId]
+      [commodityId, userId]
     );
 
     res.json({

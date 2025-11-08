@@ -1,22 +1,55 @@
 const { all, get, run } = require('../config/database');
 const { getISTTimeAgo, formatForAPI } = require('../utils/timezone');
 
-// GOLD 999 WITH GST commodity ID (only commodity in database)
-const GOLD999_COMMODITY_ID = 17;
+// GOLD 999 WITH GST commodity symbol
+const GOLD999_SYMBOL = 'XAU999';
+
+// Cache for commodity ID to avoid repeated lookups
+let GOLD999_COMMODITY_ID = null;
+
+/**
+ * Get GOLD 999 commodity ID from database by symbol
+ * This ensures we get the correct ID even if it's not 17
+ */
+async function getGold999CommodityId() {
+  if (GOLD999_COMMODITY_ID !== null) {
+    return GOLD999_COMMODITY_ID;
+  }
+
+  try {
+    const commodity = await get(
+      'SELECT id FROM commodities WHERE symbol = ?',
+      [GOLD999_SYMBOL]
+    );
+
+    if (!commodity) {
+      throw new Error(`Commodity with symbol ${GOLD999_SYMBOL} not found in database`);
+    }
+
+    GOLD999_COMMODITY_ID = commodity.id;
+    console.log(`✅ GOLD 999 commodity ID resolved: ${GOLD999_COMMODITY_ID}`);
+    return GOLD999_COMMODITY_ID;
+  } catch (error) {
+    console.error('Error getting GOLD 999 commodity ID:', error.message);
+    throw error;
+  }
+}
 
 /**
  * Get current LTP for GOLD 999 (ultra-lightweight)
  */
 async function getCurrentLTP(req, res) {
   try {
+    const commodityId = await getGold999CommodityId();
+
     // Get latest rate
     const currentRate = await get(
-      `SELECT ltp, updated_at 
-       FROM rates 
-       WHERE commodity_id = ? 
-       ORDER BY updated_at DESC 
+      `SELECT ltp, updated_at
+       FROM rates
+       WHERE commodity_id = ?
+       ORDER BY updated_at DESC
        LIMIT 1`,
-      [GOLD999_COMMODITY_ID]
+      [commodityId]
     );
 
     if (!currentRate) {
@@ -28,13 +61,13 @@ async function getCurrentLTP(req, res) {
 
     // Get previous rate for change calculation
     const previousRate = await get(
-      `SELECT ltp 
-       FROM rates 
-       WHERE commodity_id = ? 
-         AND updated_at < ? 
-       ORDER BY updated_at DESC 
+      `SELECT ltp
+       FROM rates
+       WHERE commodity_id = ?
+         AND updated_at < ?
+       ORDER BY updated_at DESC
        LIMIT 1`,
-      [GOLD999_COMMODITY_ID, currentRate.updated_at]
+      [commodityId, currentRate.updated_at]
     );
 
     let change = 0;
@@ -68,11 +101,13 @@ async function getCurrentLTP(req, res) {
  */
 async function getLastHourData(req, res) {
   try {
+    const commodityId = await getGold999CommodityId();
+
     // Get IST timestamp for 1 hour ago
     const oneHourAgo = getISTTimeAgo(1);
-    
+
     const query = `
-      SELECT 
+      SELECT
         ltp,
         updated_at,
         strftime('%Y-%m-%d %H:%M:00', updated_at) as time_bucket
@@ -82,8 +117,8 @@ async function getLastHourData(req, res) {
       GROUP BY time_bucket
       ORDER BY updated_at ASC
     `;
-    
-    const data = await all(query, [GOLD999_COMMODITY_ID, oneHourAgo]);
+
+    const data = await all(query, [commodityId, oneHourAgo]);
     
     res.json({
       success: true,
@@ -111,6 +146,8 @@ async function getLastHourData(req, res) {
  */
 async function getChartData(req, res) {
   try {
+    const commodityId = await getGold999CommodityId();
+
     const { interval = 'hourly', days = 7, limit = 50 } = req.query;
     const daysInt = Math.min(parseInt(days) || 7, 30); // Max 30 days
     const limitInt = Math.min(parseInt(limit) || 50, 200); // Max 200 points
@@ -118,7 +155,7 @@ async function getChartData(req, res) {
     // Get commodity info
     const commodity = await get(
       'SELECT id, name, symbol FROM commodities WHERE id = ?',
-      [GOLD999_COMMODITY_ID]
+      [commodityId]
     );
 
     if (!commodity) {
@@ -191,7 +228,7 @@ async function getChartData(req, res) {
       });
     }
 
-    const results = await all(query, [GOLD999_COMMODITY_ID, cutoffISO, limitInt]);
+    const results = await all(query, [commodityId, cutoffISO, limitInt]);
 
     // Format response
     const data = results
@@ -206,12 +243,12 @@ async function getChartData(req, res) {
 
     // Get current rate for comparison
     const currentRate = await get(
-      `SELECT ltp, updated_at 
-       FROM rates 
-       WHERE commodity_id = ? 
-       ORDER BY updated_at DESC 
+      `SELECT ltp, updated_at
+       FROM rates
+       WHERE commodity_id = ?
+       ORDER BY updated_at DESC
        LIMIT 1`,
-      [GOLD999_COMMODITY_ID]
+      [commodityId]
     );
 
     res.json({
@@ -247,6 +284,8 @@ async function getChartData(req, res) {
  */
 async function getLatestRate(req, res) {
   try {
+    const commodityId = await getGold999CommodityId();
+
     const query = `
       SELECT
         r.*,
@@ -261,7 +300,7 @@ async function getLatestRate(req, res) {
       LIMIT 1
     `;
 
-    const rate = await get(query, [GOLD999_COMMODITY_ID]);
+    const rate = await get(query, [commodityId]);
 
     if (!rate) {
       return res.status(404).json({
@@ -288,6 +327,6 @@ module.exports = {
   getChartData,
   getLastHourData,
   getLatestRate,
-  GOLD999_COMMODITY_ID
+  getGold999CommodityId
 };
 

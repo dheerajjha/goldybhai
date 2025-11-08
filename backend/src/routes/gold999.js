@@ -5,7 +5,7 @@ const {
   getChartData,
   getLastHourData,
   getLatestRate,
-  GOLD999_COMMODITY_ID
+  getGold999CommodityId
 } = require('../controllers/gold999Controller');
 const { getAllAlerts, createAlert, updateAlert, deleteAlert } = require('../controllers/alertController');
 const {
@@ -31,7 +31,8 @@ router.get('/latest', getLatestRate);
 router.get('/alerts', async (req, res) => {
   try {
     const { userId = 1 } = req.query;
-    
+    const commodityId = await getGold999CommodityId();
+
     const query = `
       SELECT
         a.*,
@@ -44,9 +45,9 @@ router.get('/alerts', async (req, res) => {
       WHERE a.user_id = ? AND a.commodity_id = ?
       ORDER BY a.created_at DESC
     `;
-    
+
     const { all } = require('../config/database');
-    const alerts = await all(query, [userId, GOLD999_COMMODITY_ID]);
+    const alerts = await all(query, [userId, commodityId]);
     
     res.json({
       success: true,
@@ -62,10 +63,18 @@ router.get('/alerts', async (req, res) => {
 });
 
 // POST /api/gold999/alerts - Create alert for GOLD 999
-router.post('/alerts', (req, res, next) => {
-  // Force commodity_id to GOLD 999
-  req.body.commodityId = GOLD999_COMMODITY_ID;
-  createAlert(req, res);
+router.post('/alerts', async (req, res, next) => {
+  try {
+    // Force commodity_id to GOLD 999
+    const commodityId = await getGold999CommodityId();
+    req.body.commodityId = commodityId;
+    createAlert(req, res);
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: 'Failed to get GOLD 999 commodity'
+    });
+  }
 });
 
 // PUT /api/gold999/alerts/:id - Update alert

@@ -1,6 +1,6 @@
 const cron = require('node-cron');
 const { all, run, get } = require('../config/database');
-const { GOLD999_COMMODITY_ID } = require('../controllers/gold999Controller');
+const { getGold999CommodityId } = require('../controllers/gold999Controller');
 const fcmService = require('./fcmService');
 const { getTokensForNotification, removeInvalidTokens } = require('../controllers/fcmController');
 const { formatForSQLite } = require('../utils/timezone');
@@ -8,6 +8,7 @@ const { formatForSQLite } = require('../utils/timezone');
 let cronJob = null;
 let cachedRate = null;
 let cacheTimestamp = null;
+let cachedCommodityId = null; // Cache the commodity ID
 const CACHE_TTL = 5; // Cache rate for 5 seconds
 
 /**
@@ -15,8 +16,8 @@ const CACHE_TTL = 5; // Cache rate for 5 seconds
  */
 async function getLatestRate(commodityId) {
   // Use cache if available and fresh
-  if (cachedRate && cacheTimestamp && 
-      commodityId === GOLD999_COMMODITY_ID &&
+  if (cachedRate && cacheTimestamp &&
+      commodityId === cachedCommodityId &&
       Date.now() - cacheTimestamp < CACHE_TTL * 1000) {
     return cachedRate;
   }
@@ -30,10 +31,9 @@ async function getLatestRate(commodityId) {
   );
 
   // Cache for GOLD 999
-  if (commodityId === GOLD999_COMMODITY_ID) {
-    cachedRate = rate;
-    cacheTimestamp = Date.now();
-  }
+  cachedRate = rate;
+  cacheTimestamp = Date.now();
+  cachedCommodityId = commodityId;
 
   return rate;
 }
@@ -140,9 +140,11 @@ async function sendFCMNotifications(triggeredAlerts) {
  */
 async function checkAlerts() {
   try {
+    const commodityId = await getGold999CommodityId();
+
     // Get latest rate once (cached)
-    const latestRate = await getLatestRate(GOLD999_COMMODITY_ID);
-    
+    const latestRate = await getLatestRate(commodityId);
+
     if (!latestRate) {
       return [];
     }
@@ -162,9 +164,9 @@ async function checkAlerts() {
        FROM alerts a
        JOIN commodities c ON a.commodity_id = c.id
        WHERE a.commodity_id = ?
-         AND a.active = 1 
+         AND a.active = 1
          AND a.triggered_at IS NULL`,
-      [GOLD999_COMMODITY_ID]
+      [commodityId]
     );
 
     if (alerts.length === 0) {
