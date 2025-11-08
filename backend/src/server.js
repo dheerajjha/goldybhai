@@ -19,6 +19,7 @@ const fcmRouter = require('./routes/fcm');
 const rateFetcher = require('./services/rateFetcher');
 const alertChecker = require('./services/alertChecker');
 const fcmService = require('./services/fcmService');
+const dataCleanup = require('./services/dataCleanup');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -103,6 +104,10 @@ async function startServer() {
     console.log('🔔 Starting alert checker service...');
     alertChecker.start();
 
+    // Start data cleanup service
+    console.log('🧹 Starting data cleanup service...');
+    dataCleanup.start();
+
     // Start server
     app.listen(PORT, () => {
       console.log(`\n✨ Server running on http://localhost:${PORT}`);
@@ -120,6 +125,7 @@ process.on('SIGINT', async () => {
   console.log('\n🛑 Shutting down gracefully...');
   rateFetcher.stop();
   alertChecker.stop();
+  dataCleanup.stop();
   const { closeDatabase } = require('./config/database');
   await closeDatabase();
   process.exit(0);
@@ -129,6 +135,7 @@ process.on('SIGTERM', async () => {
   console.log('\n🛑 Shutting down gracefully...');
   rateFetcher.stop();
   alertChecker.stop();
+  dataCleanup.stop();
   const { closeDatabase } = require('./config/database');
   await closeDatabase();
   process.exit(0);
