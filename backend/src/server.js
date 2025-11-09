@@ -30,6 +30,22 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(morgan('dev'));
 
+// URI error handler middleware - must be before routes
+app.use((req, res, next) => {
+  try {
+    // Attempt to decode the URI to catch malformed URLs early
+    decodeURIComponent(req.path);
+    next();
+  } catch (err) {
+    // Log malicious/malformed requests at debug level to reduce noise
+    console.log('Blocked malformed URI request:', req.path);
+    return res.status(400).json({
+      success: false,
+      error: 'Invalid URI'
+    });
+  }
+});
+
 // Serve static files from web directory
 app.use(express.static(path.join(__dirname, '../web')));
 
@@ -65,8 +81,18 @@ app.get('*', (req, res) => {
 
 // Error handler
 app.use((err, req, res, next) => {
+  // Handle URI decoding errors (malicious requests)
+  if (err instanceof URIError || (err.message && err.message.includes('Failed to decode'))) {
+    console.log('Blocked malformed URI request:', req.path);
+    return res.status(400).json({
+      success: false,
+      error: 'Invalid URI'
+    });
+  }
+
+  // Handle other errors
   console.error('Server error:', err);
-  res.status(500).json({
+  res.status(err.status || 500).json({
     success: false,
     error: err.message || 'Internal server error'
   });

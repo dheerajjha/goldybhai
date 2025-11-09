@@ -72,7 +72,17 @@ function parseFromSQLite(sqliteTimestamp) {
 function getISTTimeAgo(hours) {
   const now = getCurrentIST();
   const timeAgo = new Date(now.getTime() - (hours * 60 * 60 * 1000));
-  return formatForSQLite(timeAgo);
+
+  // Don't call formatForSQLite which would double-convert to IST
+  // Instead, format directly since timeAgo is already in IST
+  const year = timeAgo.getFullYear();
+  const month = String(timeAgo.getMonth() + 1).padStart(2, '0');
+  const day = String(timeAgo.getDate()).padStart(2, '0');
+  const hoursStr = String(timeAgo.getHours()).padStart(2, '0');
+  const minutes = String(timeAgo.getMinutes()).padStart(2, '0');
+  const seconds = String(timeAgo.getSeconds()).padStart(2, '0');
+
+  return `${year}-${month}-${day} ${hoursStr}:${minutes}:${seconds}`;
 }
 
 /**
