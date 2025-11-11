@@ -1,11 +1,11 @@
 {
-    "name": "shop_rates",
-    "short_name": "shop_rates",
+    "name": "Gold Price Tracker",
+    "short_name": "Gold Tracker",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#000000",
+    "theme_color": "#D4A574",
+    "description": "Real-time Gold & Silver price tracker with alerts",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

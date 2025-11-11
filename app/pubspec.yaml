@@ -78,6 +78,12 @@ dev_dependencies:
   # rules and activating additional ones.
   flutter_lints: ^5.0.0
 
+  # Icon generator
+  flutter_launcher_icons: ^0.13.1
+
+  # Splash screen generator
+  flutter_native_splash: ^2.4.0
+
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
 
@@ -122,3 +128,24 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+
+# Flutter Launcher Icons configuration
+flutter_launcher_icons:
+  android: true
+  ios: true
+  web:
+    generate: true
+  image_path: "logo.png"
+  adaptive_icon_background: "#000000"
+  adaptive_icon_foreground: "logo.png"
+
+# Flutter Native Splash configuration
+flutter_native_splash:
+  color: "#000000"
+  image: splash.png
+  android: true
+  ios: true
+  web: true
+  android_12:
+    color: "#000000"
+    image: splash.png
