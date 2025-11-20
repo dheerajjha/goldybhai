@@ -609,7 +609,7 @@ class _Gold999ScreenState extends State<Gold999Screen>
       onRefresh: _loadData,
       child: SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 80),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -704,7 +704,7 @@ class _Gold999ScreenState extends State<Gold999Screen>
                   'Create your first price alert to get notified when gold price reaches your target.',
             )
           : ListView.builder(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 80),
               itemCount: _alerts.length,
               itemBuilder: (context, index) {
                 final alert = _alerts[index];
