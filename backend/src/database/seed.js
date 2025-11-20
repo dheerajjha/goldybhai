@@ -8,8 +8,8 @@ const seedData = {
 
   commodities: [
     // Existing commodities with GST
-    { name: 'GOLD 995 WITH GST', symbol: 'XAU995', unit: '1 KG', type: 'gold' },
-    { name: 'GOLD 999 WITH GST', symbol: 'XAU999', unit: '1 KG', type: 'gold' },
+    { name: 'GOLD 995 WITH GST INDIAN-BIS', symbol: 'XAU995', unit: '1 KG', type: 'gold' },
+    { name: 'GOLD 999 IMP (LBMA) WITH GST', symbol: 'XAU999', unit: '1 KG', type: 'gold' },
     { name: 'GOLD 99.99 (4 NINE) IMP WITH GST', symbol: 'XAU9999GST', unit: '1 KG', type: 'gold' },
     { name: 'SILVER 999 WITH GST', symbol: 'XAG999', unit: '1 KG', type: 'silver' },
 

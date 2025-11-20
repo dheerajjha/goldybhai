@@ -35,11 +35,7 @@ class _Gold999ScreenState extends State<Gold999Screen>
   String? _error;
 
   String _currentInterval = 'hourly';
-  int _currentDays = 1; // Fixed to 24 hours
-
-  // Track last loaded interval/days to detect changes
-  String? _lastLoadedInterval;
-  int? _lastLoadedDays;
+  int _currentDays = 1;
 
   Timer? _refreshTimer;
   Timer? _notificationPollTimer;
@@ -227,7 +223,7 @@ class _Gold999ScreenState extends State<Gold999Screen>
     try {
       await Future.wait([
         _loadCurrentLTP(),
-        _loadLastHourData(),
+        _loadChartData(),
         _loadAlerts(),
       ]);
     } catch (e) {
@@ -263,10 +259,20 @@ class _Gold999ScreenState extends State<Gold999Screen>
     }
   }
 
-  Future<void> _loadLastHourData() async {
+  Future<void> _loadChartData() async {
     setState(() => _loadingChart = true);
     try {
-      final chart = await _client.getLastHourData();
+      ChartData chart;
+      if (_currentInterval == 'hourly') {
+        // Use last hour endpoint for hourly view
+        chart = await _client.getLastHourData();
+      } else {
+        // Use chart endpoint with daily interval
+        chart = await _client.getChartData(
+          interval: _currentInterval,
+          days: _currentDays,
+        );
+      }
 
       if (mounted) {
         setState(() {
@@ -280,6 +286,14 @@ class _Gold999ScreenState extends State<Gold999Screen>
         setState(() => _loadingChart = false);
       }
     }
+  }
+
+  Future<void> _changeInterval(String interval) async {
+    setState(() {
+      _currentInterval = interval;
+      _currentDays = interval == 'hourly' ? 1 : 7;
+    });
+    await _loadChartData();
   }
 
   /// Add new data point to chart (for real-time updates)
@@ -424,6 +438,29 @@ class _Gold999ScreenState extends State<Gold999Screen>
         }
       }
     }
+  }
+
+  Widget _buildIntervalButton(String label, String interval) {
+    final isSelected = _currentInterval == interval;
+    return GestureDetector(
+      onTap: () => _changeInterval(interval),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        decoration: BoxDecoration(
+          color: isSelected ? Colors.amber : Colors.transparent,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Text(
+          label,
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+            color: isSelected ? Colors.grey[900] : Colors.grey[600],
+            fontSize: 14,
+          ),
+        ),
+      ),
+    );
   }
 
   @override
@@ -585,11 +622,43 @@ class _Gold999ScreenState extends State<Gold999Screen>
                 updatedAt: _currentLTP!.updatedAt,
               ),
             const SizedBox(height: 24),
-            Text(
-              l10n?.last24Hours ?? 'Last 1 Hour',
-              style: Theme.of(
-                context,
-              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  _currentInterval == 'hourly'
+                      ? (l10n?.last24Hours ?? 'Last 1 Hour')
+                      : 'Last 7 Days',
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            // Interval selector
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: _buildIntervalButton('Hourly', 'hourly'),
+                  ),
+                  Expanded(
+                    child: _buildIntervalButton('Daily', 'daily'),
+                  ),
+                ],
+              ),
             ),
             const SizedBox(height: 16),
             Builder(

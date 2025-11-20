@@ -76,8 +76,9 @@ class GoldChart extends StatelessWidget {
                     Icon(Icons.access_time, size: 16, color: Colors.grey[700]),
                     const SizedBox(width: 8),
                     Text(
-                      AppLocalizations.of(context)?.last24Hours ??
-                          'Last 24 Hours',
+                      interval == 'hourly'
+                          ? (AppLocalizations.of(context)?.last24Hours ?? 'Last 1 Hour')
+                          : 'Last 7 Days',
                       style: TextStyle(
                         color: Colors.grey[800],
                         fontWeight: FontWeight.w600,
@@ -259,10 +260,13 @@ class GoldChart extends StatelessWidget {
 
   String _formatAxisTime(DateTime timestamp) {
     try {
-      // Format with minutes and AM/PM for clarity
-      return DateFormat(
-        'h:mm a',
-      ).format(timestamp); // e.g., "1:30 PM", "2:45 PM"
+      if (interval == 'daily') {
+        // For daily view, show date (e.g., "Jan 15" or "15 Jan")
+        return DateFormat('MMM d').format(timestamp);
+      } else {
+        // For hourly view, show time with AM/PM
+        return DateFormat('h:mm a').format(timestamp); // e.g., "1:30 PM"
+      }
     } catch (e) {
       return '';
     }
@@ -270,8 +274,13 @@ class GoldChart extends StatelessWidget {
 
   String _formatTooltipTime(DateTime timestamp) {
     try {
-      // Format with AM/PM for tooltip
-      return DateFormat('h:mm a').format(timestamp); // e.g., "2:30 PM"
+      if (interval == 'daily') {
+        // For daily view, show full date
+        return DateFormat('MMM d, yyyy').format(timestamp); // e.g., "Jan 15, 2024"
+      } else {
+        // For hourly view, show time with AM/PM
+        return DateFormat('h:mm a').format(timestamp); // e.g., "2:30 PM"
+      }
     } catch (e) {
       return timestamp.toString();
     }
