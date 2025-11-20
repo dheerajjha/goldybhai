@@ -77,8 +77,10 @@ class GoldChart extends StatelessWidget {
                     const SizedBox(width: 8),
                     Text(
                       interval == 'hourly'
+                          ? 'Last 24 Hours'
+                          : interval == '1m'
                           ? (AppLocalizations.of(context)?.last24Hours ?? 'Last 1 Hour')
-                          : 'Last 7 Days',
+                          : 'Chart Data',
                       style: TextStyle(
                         color: Colors.grey[800],
                         fontWeight: FontWeight.w600,

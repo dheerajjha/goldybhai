@@ -264,13 +264,13 @@ class _Gold999ScreenState extends State<Gold999Screen>
     try {
       ChartData chart;
       if (_currentInterval == 'hourly') {
-        // Use last hour endpoint for hourly view
+        // Use last hour endpoint for hourly view (1-minute intervals)
         chart = await _client.getLastHourData();
       } else {
-        // Use chart endpoint with daily interval
+        // Use chart endpoint with hourly aggregation for 24-hour view
         chart = await _client.getChartData(
-          interval: _currentInterval,
-          days: _currentDays,
+          interval: 'hourly',
+          days: 1,
         );
       }
 
@@ -291,7 +291,6 @@ class _Gold999ScreenState extends State<Gold999Screen>
   Future<void> _changeInterval(String interval) async {
     setState(() {
       _currentInterval = interval;
-      _currentDays = interval == 'hourly' ? 1 : 7;
     });
     await _loadChartData();
   }
@@ -628,7 +627,7 @@ class _Gold999ScreenState extends State<Gold999Screen>
                 Text(
                   _currentInterval == 'hourly'
                       ? (l10n?.last24Hours ?? 'Last 1 Hour')
-                      : 'Last 7 Days',
+                      : 'Last 24 Hours',
                   style: Theme.of(
                     context,
                   ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
@@ -652,10 +651,10 @@ class _Gold999ScreenState extends State<Gold999Screen>
               child: Row(
                 children: [
                   Expanded(
-                    child: _buildIntervalButton('Hourly', 'hourly'),
+                    child: _buildIntervalButton('1 Hour', 'hourly'),
                   ),
                   Expanded(
-                    child: _buildIntervalButton('Daily', 'daily'),
+                    child: _buildIntervalButton('24 Hours', 'daily'),
                   ),
                 ],
               ),
