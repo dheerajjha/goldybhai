@@ -527,10 +527,21 @@ class ChartData {
         throw Exception('Invalid ChartData: data field missing or not a List');
       }
 
+      // Handle both response formats:
+      // - /last-hour: interval and period at root level
+      // - /chart: interval and period inside metadata object
+      final metadata = json['metadata'] as Map<String, dynamic>?;
+      final interval = json['interval'] as String?
+          ?? metadata?['interval'] as String?
+          ?? '1m';
+      final period = json['period'] as String?
+          ?? metadata?['period'] as String?
+          ?? '1h';
+
       return ChartData(
         data: (json['data'] as List).map((p) => ChartPoint.fromJson(p)).toList(),
-        interval: json['interval'] as String? ?? '1m',
-        period: json['period'] as String? ?? '1h',
+        interval: interval,
+        period: period,
       );
     } catch (e) {
       print('❌ Error parsing ChartData: $e');
