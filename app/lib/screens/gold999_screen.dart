@@ -297,8 +297,12 @@ class _Gold999ScreenState extends State<Gold999Screen>
 
   /// Add new data point to chart (for real-time updates)
   /// Only adds a point if it's been at least 1 minute since the last point
+  /// Only applies to 1-hour view - 24-hour view uses hourly aggregated data
   void _addChartDataPoint(double ltp, DateTime timestamp) {
     if (_chartData == null || _chartData!.data.isEmpty) return;
+
+    // Don't add real-time points to 24-hour view (it uses hourly aggregated data)
+    if (_currentInterval == 'daily') return;
 
     // Only add a new point if it's been at least 1 minute since the last point
     final lastPoint = _chartData!.data.last;
